@@ -1,0 +1,239 @@
+package org.gyula.onlineinvoiceapi.services;
+
+import com.google.common.util.concurrent.RateLimiter;
+import org.apache.logging.log4j.Logger;
+import org.gyula.onlineinvoiceapi.config.TokenGenerator;
+import org.gyula.onlineinvoiceapi.model.*;
+import org.gyula.onlineinvoiceapi.repositories.*;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.ApplicationArguments;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.support.SimpleTriggerContext;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import org.apache.logging.log4j.LogManager;
+import org.springframework.web.multipart.MultipartFile;
+
+@Service
+public class UserService {
+
+    private static final Logger log = LogManager.getLogger(UserService.class);
+
+
+    @Autowired
+    private ApartmentRepository apartmentRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private GasMeterRepository gasMeterValueRepository;
+
+    @Autowired
+    private ElectricityMeterRepository electricityMeterValueRepository;
+
+    @Autowired
+    private WaterMeterRepository waterMeterValueRepository;
+
+
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
+    private final RateLimiter loginRateLimiter;
+    private final JavaMailSender mailSender;
+//    private final ApplicationArguments springApplicationArguments;
+
+    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, RegistrationTokenRepository tokenRepository, JavaMailSender mailSender, ApplicationArguments springApplicationArguments) {
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+        this.mailSender = mailSender;
+        this.loginRateLimiter = RateLimiter.create(3.0);
+//        this.springApplicationArguments = springApplicationArguments;
+    }
+
+    public User getUserByUsername(String username) throws RuntimeException{
+        log.info("In getUserByUsername: " + username);
+        try {
+            return userRepository.findByUsername(username).orElse(null);
+        }catch (Exception e){
+            log.error("An error occurred during getUserByUsername: {}", e.getMessage());
+            throw new RuntimeException("Couldn't find email for the user " + username);
+        }
+    }
+
+    public void registerUser(RegisterRequest registerRequest) {
+        log.info("In registerUser");
+
+        try {
+            User user = new User();
+            user.setEmail(registerRequest.getEmail());
+            user.setUsername(registerRequest.getUsername());
+            user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));  // Encrypt the password
+            user.setEnabled(true);
+
+            //Adding USER role as default
+            Authority authority = new Authority();
+            authority.setUser(user);
+            authority.setAuthority("ROLE_USER");
+            Set<Authority> authorities = new HashSet<>();
+            authorities.add(authority);
+            user.setAuthorities(authorities);
+
+            userRepository.save(user);  // Update user with authorities
+            log.info("User {} registered successfully.", user.getUsername());
+        }catch (Exception e){
+            log.error("An error occurred during registration: {}", e.getMessage());
+        }
+
+    }
+
+//    public boolean login(String username, String rawPassword) throws IllegalArgumentException {
+//        // Fetch the user by username
+//        User user = userRepository.findByUsername(username)
+//                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+//        if (!user.isEnabled()) {
+//            throw new IllegalArgumentException("User is disabled");
+//        }
+//        // Check if the raw password matches the encrypted password
+//        return passwordEncoder.matches(rawPassword, user.getPassword());  // Authentication successful
+//    }
+
+
+
+    public boolean isAllowed() {
+        return loginRateLimiter.tryAcquire(); // Check if the request can proceed
+    }
+
+    public void addMeterValue(String meterType, Map<String, String> values, MultipartFile file) throws Exception {
+        if (values == null || values.isEmpty()) {
+            throw new IllegalArgumentException("Values map cannot be null or empty");
+        }
+        byte[] fileContent;
+        if(file != null){
+            fileContent = file.getBytes();
+        }else{
+            fileContent = null;
+        }
+
+
+        // Extracting necessary values from the map
+        long apartmentReference = Long.parseLong(values.get("apartmentId"));
+        Apartment newApartment = apartmentRepository.findById(apartmentReference)
+                .orElseThrow(() -> new IllegalArgumentException("Apartment not found for reference: " + values.get("apartmentId")));
+        String valueToAdd = values.get("meterValue");
+
+        try {
+            String tableName;
+            String updateQuery;
+
+            switch (meterType) {
+                case "gas":
+                    GasMeterValues gasMeterValue = new GasMeterValues();
+                    tableName = "gas_meter_values";
+                    gasMeterValue.setLatest(true);
+                    gasMeterValue.setApartmentReference(newApartment);
+                    gasMeterValue.setDateOfRecording(LocalDateTime.now());
+                    gasMeterValue.setGasValue(Integer.parseInt(valueToAdd));
+                    if(fileContent != null) gasMeterValue.setImageFile(fileContent);
+                    gasMeterValueRepository.save(gasMeterValue);
+                    //Modify the previous latest value only if the save wass successful
+                    updateQuery = "UPDATE " + tableName + " SET latest = false WHERE apartment_reference = " + apartmentReference + " AND id NOT IN (SELECT id FROM " + tableName + " WHERE apartment_reference = " + apartmentReference + " ORDER BY date_of_recording DESC LIMIT 1)";
+                    jdbcTemplate.update(updateQuery);
+                    break;
+                case "electricity":
+                    ElectricityMeterValues electricityMeterValue = new ElectricityMeterValues();
+                    tableName = "electricity_meter_values";
+                    electricityMeterValue.setLatest(true);
+                    electricityMeterValue.setApartmentReference(newApartment);
+                    electricityMeterValue.setDateOfRecording(LocalDateTime.now());
+                    electricityMeterValue.setElectricityValue(Integer.parseInt(valueToAdd));
+                    electricityMeterValue.setImageFile(fileContent);
+                    electricityMeterValueRepository.save(electricityMeterValue);
+                    //Modify the previous latest value only if the save wass successful
+                    updateQuery = "UPDATE " + tableName + " SET latest = false WHERE apartment_reference = " + apartmentReference + " AND id NOT IN (SELECT id FROM " + tableName + " WHERE apartment_reference = " + apartmentReference + " ORDER BY date_of_recording DESC LIMIT 1)";
+                    jdbcTemplate.update(updateQuery);
+                    break;
+                case "water":
+                    WaterMeterValues waterMeterValue = new WaterMeterValues();
+                    tableName = "water_meter_values";
+                    waterMeterValue.setLatest(true);
+                    waterMeterValue.setApartmentReference(newApartment);
+                    waterMeterValue.setDateOfRecording(LocalDateTime.now());
+                    waterMeterValue.setWaterValue(Integer.parseInt(valueToAdd));
+                    waterMeterValue.setImageFile(fileContent);
+                    waterMeterValueRepository.save(waterMeterValue);
+                    //Modify the previous latest value only if the save wass successful
+                    updateQuery = "UPDATE " + tableName + " SET latest = false WHERE apartment_reference = " + apartmentReference + " AND id NOT IN (SELECT id FROM " + tableName + " WHERE apartment_reference = " + apartmentReference + " ORDER BY date_of_recording DESC LIMIT 1)";
+                    jdbcTemplate.update(updateQuery);
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid meterType: " + meterType);
+            }
+
+        }catch (Exception e){
+            log.error("An error occurred during meter value submission: {}", e.getMessage());
+            throw new Exception("An error occurred during meter value submission." + e.getMessage());
+
+        }
+    }
+
+    //sends the latest gas/electricity/water meter value submitted for an apartment
+    public String sendOldMeterValue(String meterType, Long apartmentId) throws Exception {
+
+        List<Map<String, Object>> foundMeterValues;
+
+        try{
+            return switch (meterType) {
+                case "gas" -> {
+                    foundMeterValues = apartmentRepository.findActiveGasMeterValues(apartmentId);
+                    yield foundMeterValues.get(0).get("gas_value").toString();
+                }
+                case "electricity" -> {
+                    foundMeterValues = apartmentRepository.findActiveElectricityMeterValues(apartmentId);
+                    yield foundMeterValues.get(0).get("electricity_value").toString();
+                }
+                case "water" -> {
+                    foundMeterValues = apartmentRepository.findActiveWaterMeterValues(apartmentId);
+                    yield foundMeterValues.get(0).get("water_value").toString();
+                }
+                default -> throw new Exception("Invalid meterType: " + meterType);
+            };
+        }catch (IndexOutOfBoundsException e){
+            throw new Exception("No meter value found for apartment: " + apartmentId);
+        }
+    }
+
+    //returns the last 12 gas/electricity/water meter values submitted for an apartment
+    public Map<String, String> sendLastYearMeterValue(String meterType, Long apartmentId) throws Exception {
+        List<Map<String, Object>> result = null;
+        switch (meterType) {
+            case "gas" -> {result = apartmentRepository.findLatestGasMeterValues(apartmentId); break;}
+            case "electricity" -> {result = apartmentRepository.findLatestElectricityMeterValues(apartmentId); break;}
+            case "water" -> {result = apartmentRepository.findLatestWaterMeterValues(apartmentId); break;}
+            default -> throw new Exception("Invalid meterType: " + meterType);
+        }
+
+        Map<String, String> resultMap = new LinkedHashMap<>();
+        result.stream()
+                .sorted((m1, m2) -> m2.get("date_of_recording").toString().compareTo(m1.get("date_of_recording").toString()))
+                .forEach(map -> {
+                    log.info("Found meter value: " + map.get("date_of_recording") + " " + map.get(meterType + "_value"));
+                    resultMap.put(map.get("date_of_recording").toString(), map.get(meterType + "_value").toString());
+                });
+
+        return resultMap;
+    }
+
+
+}
+

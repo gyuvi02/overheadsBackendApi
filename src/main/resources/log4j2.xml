@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <Appenders>
+        <Console name="console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d %p %m %ex%n" />
+        </Console>
+
+<!-- for Ubuntu  -->
+<!--        <File name="log-file" fileName= "/opt/tomcat/apache-tomcat-10.1.40/logs/invoiceAPI.log">-->
+<!--            <PatternLayout pattern="%d %p %m %ex%n" />-->
+<!--        </File>-->
+<!-- for Windows  -->
+        <File name="log-file" fileName= "logs/invoiceAPI.log">
+            <PatternLayout pattern="%d %p %m %ex%n" />
+        </File>
+    </Appenders>
+
+    <Loggers>
+        <Logger name="org.gyula" level="DEBUG" additivity="false">
+            <AppenderRef ref="console" />
+            <AppenderRef ref="log-file" />
+        </Logger>
+        
+        <logger level="DEBUG" name="org.springframework.web.filter.CommonsRequestLoggingFilter" additivity="false">
+            <AppenderRef ref="console" />
+            <AppenderRef ref="log-file" />
+		</logger>
+
+        <Root level="WARN">
+            <AppenderRef ref="console" />
+            <AppenderRef ref="log-file" />
+        </Root>
+    </Loggers>
+</Configuration>
