@@ -3,7 +3,9 @@ package org.gyula.onlineinvoiceapi.controller;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gyula.onlineinvoiceapi.model.Apartment;
+import org.gyula.onlineinvoiceapi.model.User;
 import org.gyula.onlineinvoiceapi.repositories.ApartmentRepository;
+import org.gyula.onlineinvoiceapi.repositories.UserRepository;
 import org.gyula.onlineinvoiceapi.services.AdminService;
 import org.gyula.onlineinvoiceapi.services.AuthenticationService;
 import org.gyula.onlineinvoiceapi.services.CustomUserDetailsService;
@@ -70,6 +72,8 @@ public class AdminController {
 
     @Autowired
     private ApartmentRepository apartmentRepository;
+    @Autowired
+    private UserRepository userRepository;
 
 
     /**
@@ -80,10 +84,11 @@ public class AdminController {
      * @param authorizationHeader the Authorization header containing user credentials
      * @return ResponseEntity containing the status and message of the email operation
      */
-    @GetMapping(value = "/sendEmail")
+    @PostMapping(value = "/sendEmail")
     public ResponseEntity<?> generateToken(
             @RequestHeader("API-KEY") String apiKey,
-            @RequestHeader("Authorization") String authorizationHeader)
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody Map<String, String> body)
     {
 
         String username = null;
@@ -97,14 +102,21 @@ public class AdminController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(username + " is not authorized to send email.");
             }
 
-            String email = userService.getUserByUsername(username).getEmail();
-            if (email == null) {
-                log.error("The user {} does not exist.", username);
-                throw new Exception("The user does not exist:" + username);
-            }
+            String email = body.get("email");
+            log.info("Sending email to user {}", email);
+            String apartmentName = apartmentRepository.findById(Long.parseLong(body.get("apartment")))
+                    .map(apt -> apt.getCity() + " " + apt.getStreet())
+                    .orElse("");
+            log.info("Apartment name: {}", apartmentName);
+//            if (email == null) {
+//                log.error("The user {} does not exist.", username);
+//                throw new Exception("The user does not exist:" + username);
+//            }
 
-            String link = adminServce.sendRegistrationEmail(email);
-            return ResponseEntity.ok("Email sent successfully, link attached:" + link);
+            String link = adminServce.sendRegistrationEmail(email, apartmentName, body.get("apartment"));
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Email sent successfully");
+            return ResponseEntity.ok(response);
         } catch (RuntimeException ex) {
             log.error("\"Could not send email, the user {} does not exist.", username);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Could not send email, the user does not exist");
@@ -309,7 +321,7 @@ public class AdminController {
             String username = authenticationService.validateRequest(apiKey, authorizationHeader);
 
             if(!authenticationService.checkAdminAuthority(username)){
-                log.error("Only administrator can delete an apartment, user {} is not authorized.", username);
+                log.error("Only administrators can delete an apartment, user {} is not authorized.", username);
                 return new ResponseEntity<>("Only administrator can delete an apartment, user " + username + " is not authorized.", HttpStatus.UNAUTHORIZED);
             }
 
@@ -323,8 +335,8 @@ public class AdminController {
             return new ResponseEntity<>("Apartment could not be found", HttpStatus.BAD_REQUEST);
 
         }catch(Exception e){
-            log.error("An error occurred while saving the edited apartment {}", e.getMessage());
-            return new ResponseEntity<>("An error occurred while saving the edited apartment: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            log.error("An error occurred while deleting the apartment {}", e.getMessage());
+            return new ResponseEntity<>("An error occurred while deleting the apartment: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -351,8 +363,8 @@ public class AdminController {
             String username = authenticationService.validateRequest(apiKey, authorizationHeader);
             log.info("User {} is trying to retriev all last meter values for apartment {}", username, apartmentId.get("apartmentId"));
             if(!authenticationService.checkAdminAuthority(username)){
-                log.error("Only administrators can delete an apartment, user {} is not authorized.", username);
-                return new ResponseEntity<>("Only administrators can delete an apartment, user " + username + " is not authorized.", HttpStatus.UNAUTHORIZED);
+                log.error("Only administrators can get information on an apartment, user {} is not authorized.", username);
+                return new ResponseEntity<>("Only administrators can get information on an apartment, user " + username + " is not authorized.", HttpStatus.UNAUTHORIZED);
             }
             if (Objects.equals(apartmentId.get("withImage"), "0")) {
                 allLatestValues = adminServce.getAllLatestValues(Long.parseLong(apartmentId.get("apartmentId")));
@@ -366,6 +378,139 @@ public class AdminController {
         }catch(Exception e){
             log.error("An error occurred while searching for the latest meter values {}", e.getMessage());
             return new ResponseEntity<>("An error occurred while searching for the latest meter values: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping(value = "/getLastMeterValues")
+    public ResponseEntity<?> getLastMeterValues(
+            @RequestHeader("API-KEY") String apiKey,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody Map<String, String> body
+    ) {
+        log.info("/getLastMeterValues endpoint called");
+        log.info("body:" + body.toString());
+
+        try {
+            authenticationService.validateRequest(apiKey, authorizationHeader);
+            String apartmentId = body.get("apartmentId");
+            String meterType = body.get("meterType");
+
+            Map<String,Object>lastMeterValuesWithImages = userService.sendLastYearMeterValueWithImage(meterType, Long.valueOf(apartmentId));
+            lastMeterValuesWithImages.forEach((key, value) -> log.info("Key: {}, Value: {}", key, value));
+
+
+            Map<String, String> lastMeterValues = userService.sendLastYearMeterValue(meterType, Long.valueOf(apartmentId));
+            log.info("Last meter values retrieved successfully: " + lastMeterValues.toString());
+            return new ResponseEntity<>(lastMeterValuesWithImages, HttpStatus.OK);
+        } catch (Exception e) {
+            log.error("An error occurred during getting last 12 meter values: {}", e.getMessage());
+            Map<String, String> errorMap = new HashMap<>();
+            errorMap.put("Error", e.getMessage());
+            return new ResponseEntity<>(errorMap, HttpStatus.UNAUTHORIZED);
+        }
+    }
+
+    @GetMapping(value = "/getAllUsers")
+    public ResponseEntity<List<User>> getAllUsers(
+            @RequestHeader("API-KEY") String apiKey,
+            @RequestHeader("Authorization") String authorizationHeader) {
+
+        log.info("/getAllUsers endpoint called");
+
+        List<User> users;
+
+        try {
+            String username = authenticationService.validateRequest(apiKey, authorizationHeader);
+
+            if (!authenticationService.checkAdminAuthority(username)) {
+                log.error("Only administrators can get information on users, user {} is not authorized.", username);
+                return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+            }
+
+            users = userRepository.findAll().stream()
+                    .map(user -> {
+                        User basicUser = new User();
+                        basicUser.setId(user.getId());
+                        basicUser.setEmail(user.getEmail());
+                        basicUser.setUsername(user.getUsername());
+                        basicUser.setEnabled(user.isEnabled());
+                        return basicUser;
+                    })
+                    .toList();
+
+            if (users.isEmpty()) {
+                return new ResponseEntity<>(users, HttpStatus.NO_CONTENT);
+            }
+
+        } catch (Exception e) {
+            log.error("An error occurred during getting all users: {}", e.getMessage());
+            return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+        }
+
+        return new ResponseEntity<>(users, HttpStatus.OK);
+    }
+
+    @PostMapping(value = "deleteUser")
+    public ResponseEntity<String> deleteUser (
+            @RequestHeader("API-KEY") String apiKey,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody String deleteUserId) {
+
+        log.info("/deleteUser endpoint called");
+
+        try{
+            String username = authenticationService.validateRequest(apiKey, authorizationHeader);
+
+            if(!authenticationService.checkAdminAuthority(username)){
+                log.error("Only administrators can delete a user, user {} is not authorized.", username);
+                return new ResponseEntity<>("Only administrators can delete a user, user " + username + " is not authorized.", HttpStatus.UNAUTHORIZED);
+            }
+
+            if (userRepository.findById(Long.parseLong(deleteUserId)).isPresent()) {
+                userRepository.deleteById(Long.parseLong(deleteUserId));
+                log.info("User with the id {} deleted successfully", deleteUserId);
+                return new ResponseEntity<>(HttpStatus.OK);
+            }
+
+            log.info("User with the id {} could not be found", deleteUserId);
+            return new ResponseEntity<>("User could not be found", HttpStatus.BAD_REQUEST);
+
+        }catch(Exception e){
+            log.error("An error occurred while deleting the user {}", e.getMessage());
+            return new ResponseEntity<>("An error occurred while deleting the user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping(value = "/editUser")
+    public ResponseEntity<?> editUser (
+            @RequestHeader("API-KEY") String apiKey,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody User editedUser) {
+
+        log.info("/editUser endpoint called");
+
+        try{
+            String username = authenticationService.validateRequest(apiKey, authorizationHeader);
+
+            if(!authenticationService.checkAdminAuthority(username)){
+                log.error("Only administrators can edit an user, user {} is not authorized.", username);
+                return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
+            }
+
+            Long apartmentId = editedUser.getId();
+            if (apartmentId == null || !userRepository.findById(apartmentId).isPresent()) {
+                log.warn("User with ID {} not found for editing.", apartmentId);
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("{\"message\": \"User not found for editing.\"}");
+            }
+
+            User updatedUser = userRepository.save(editedUser);
+            log.info("User updated successfully with ID: {}", updatedUser.getId());
+            return new ResponseEntity<>(Map.of("message", "User updated successfully with ID: " + updatedUser.getId()), HttpStatus.OK);
+//            return new ResponseEntity<>("Apartment updated successfully with ID: " + updatedApartment.getId(), HttpStatus.OK);
+
+        }catch(Exception e){
+            log.error("An error occurred while saving the edited user {}", e.getMessage());
+            return new ResponseEntity<>("An error occurred while saving the edited user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }

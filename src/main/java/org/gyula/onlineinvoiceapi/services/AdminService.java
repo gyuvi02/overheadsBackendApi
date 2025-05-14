@@ -10,6 +10,7 @@ import org.hibernate.validator.internal.util.privilegedactions.GetAnnotationAttr
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
 import java.sql.Timestamp;
@@ -31,8 +32,13 @@ public class AdminService {
     @Autowired
     RegistrationTokenRepository tokenRepository;
 
+    @Autowired
+    private JavaMailSender mailSender;
+
     @Value("${spring.mail.username}")
     private String mailSendAddress;
+    @Value("${frontend.address}")
+    private String frontendAddress;
     @Autowired
     private GasMeterRepository gasMeterRepository;
     @Autowired
@@ -53,7 +59,7 @@ public class AdminService {
      * @return the registration link containing the unique token
      * @throws Exception if an error occurs during token generation, database save, or email sending
      */
-    public String sendRegistrationEmail(String userEmail) throws Exception{
+    public String sendRegistrationEmail(String userEmail, String apartmentName, String apartmentId) throws Exception{
 
         log.info("In sendRegistrationEmail: {}", userEmail);
 
@@ -70,15 +76,18 @@ public class AdminService {
             tokenRepository.save(registrationToken);
 
             //This link directs to a registration website, and that website will call the API with the token
-            link = "http://www.valamiweboldal.com/api/v1/register?token=" + token;
-
+            //For prod
+//            link = "http://omegahouses.org/registerMe?token=" + token + "&ap=" + apartmentId;
+            //for test
+            link = "https://" + frontendAddress + "/registerMe?token=" + token + "&ap=" + apartmentId;
             // Construct and send the email
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(userEmail);
-            message.setSubject("Complete Your Registration");
-            message.setText("Click the link to complete your registration: " + link + "\nExpiration: " + LocalDateTime.now().plusDays(1));
+            message.setSubject("Complete Your Registration for the apartment: " + apartmentName + "");
+            message.setText("Click the link to complete your registration: " + link + "\n\nThe link expires in 24 hours (" + LocalDateTime.now().plusDays(1).format(java.time.format.DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm")) + ")");
             message.setFrom(mailSendAddress);
-//            mailSender.send(message);
+            log.info("Sending email from: {}", mailSendAddress);
+            mailSender.send(message);
 
             log.info("Email sent successfully, link attached:" + link);
 
@@ -132,6 +141,15 @@ public class AdminService {
         }
     }
 
+    /**
+     * Retrieves the latest gas, electricity, and water meter values along with their respective images
+     * for a given apartment.
+     *
+     * @param apartmentId the ID of the apartment for which the latest meter values and images are to be retrieved
+     * @return a map containing the latest meter values (gas, electricity, water) and their corresponding image file paths.
+     * The keys in the map include "gas", "gas_image", "electricity", "electricity_image", "water", and "water_image"
+     * @throws Exception if the apartment is not found or any error occurs during the retrieval of values
+     */
     public Map<String, Object> getAllLatestValuesWithImages(Long apartmentId) throws Exception {
         log.info("In getAllLatestValuesWithImages: {}", apartmentId);
         try {
@@ -182,6 +200,19 @@ public class AdminService {
             throw e;
         }
     }
+
+//    public Map<String, Object> deleteUser(Long userId) throws Exception {
+//        log.info("In deleteUser: {}", userId);
+//        try {
+//            Map<String, Object> latestValues = new HashMap<>();
+//
+//            return latestValues;
+//
+//        } catch (Exception e) {
+//            log.error("Error retrieving latest values with images for apartment {}: {}", userId, e.getMessage());
+//            throw e;
+//        }
+//    }
 
 
 }
