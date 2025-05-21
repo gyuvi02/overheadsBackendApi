@@ -6,7 +6,6 @@ import org.gyula.onlineinvoiceapi.config.TokenGenerator;
 import org.gyula.onlineinvoiceapi.model.Apartment;
 import org.gyula.onlineinvoiceapi.model.RegistrationToken;
 import org.gyula.onlineinvoiceapi.repositories.*;
-import org.hibernate.validator.internal.util.privilegedactions.GetAnnotationAttribute;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -19,10 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Service class responsible for managing administrative functionalities such as
- * sending registration emails to users and retrieving the latest utility meter values.
- */
+
 @SuppressWarnings("unused")
 @Service("adminService")
 public class AdminService {
@@ -76,9 +72,6 @@ public class AdminService {
             tokenRepository.save(registrationToken);
 
             //This link directs to a registration website, and that website will call the API with the token
-            //For prod
-//            link = "http://omegahouses.org/registerMe?token=" + token + "&ap=" + apartmentId;
-            //for test
             link = "https://" + frontendAddress + "/registerMe?token=" + token + "&ap=" + apartmentId;
             // Construct and send the email
             SimpleMailMessage message = new SimpleMailMessage();
@@ -200,19 +193,4 @@ public class AdminService {
             throw e;
         }
     }
-
-//    public Map<String, Object> deleteUser(Long userId) throws Exception {
-//        log.info("In deleteUser: {}", userId);
-//        try {
-//            Map<String, Object> latestValues = new HashMap<>();
-//
-//            return latestValues;
-//
-//        } catch (Exception e) {
-//            log.error("Error retrieving latest values with images for apartment {}: {}", userId, e.getMessage());
-//            throw e;
-//        }
-//    }
-
-
 }

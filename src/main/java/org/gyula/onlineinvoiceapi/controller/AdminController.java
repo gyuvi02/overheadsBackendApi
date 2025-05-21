@@ -4,22 +4,23 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gyula.onlineinvoiceapi.model.Apartment;
 import org.gyula.onlineinvoiceapi.model.User;
+import org.gyula.onlineinvoiceapi.model.UserListItemDto;
 import org.gyula.onlineinvoiceapi.repositories.ApartmentRepository;
+
+import java.util.Optional;
+
 import org.gyula.onlineinvoiceapi.repositories.UserRepository;
 import org.gyula.onlineinvoiceapi.services.AdminService;
 import org.gyula.onlineinvoiceapi.services.AuthenticationService;
 import org.gyula.onlineinvoiceapi.services.CustomUserDetailsService;
 import org.gyula.onlineinvoiceapi.services.UserService;
-import org.gyula.onlineinvoiceapi.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * The AdminController class provides REST API endpoints for administrative tasks
@@ -108,10 +109,7 @@ public class AdminController {
                     .map(apt -> apt.getCity() + " " + apt.getStreet())
                     .orElse("");
             log.info("Apartment name: {}", apartmentName);
-//            if (email == null) {
-//                log.error("The user {} does not exist.", username);
-//                throw new Exception("The user does not exist:" + username);
-//            }
+
 
             String link = adminServce.sendRegistrationEmail(email, apartmentName, body.get("apartment"));
             Map<String, String> response = new HashMap<>();
@@ -156,7 +154,6 @@ public class AdminController {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(username + " is not authorized to add a new apartment.");
             }
 
-            // Save the new apartment to the database
             apartmentRepository.save(newApartment);
             log.info("Apartment added successfully");
 
@@ -291,7 +288,6 @@ public class AdminController {
             Apartment updatedApartment = apartmentRepository.save(editedApartment);
             log.info("Apartment updated successfully with ID: {}", updatedApartment.getId());
             return new ResponseEntity<>(Map.of("message", "Apartment updated successfully with ID: " + updatedApartment.getId()), HttpStatus.OK);
-//            return new ResponseEntity<>("Apartment updated successfully with ID: " + updatedApartment.getId(), HttpStatus.OK);
 
         }catch(Exception e){
             log.error("An error occurred while saving the edited apartment {}", e.getMessage());
@@ -381,6 +377,18 @@ public class AdminController {
         }
     }
 
+    /**
+     * Retrieves the last meter values for a specific apartment and meter type.
+     * It validates the incoming request with the provided API key and authorization header.
+     *
+     * @param apiKey the API key provided in the request header for authentication
+     * @param authorizationHeader the authorization token provided in the request header for authentication
+     * @param body a map containing the request body, where:
+     *             - "apartmentId" is the ID of the apartment
+     *             - "meterType" is the type of meter (e.g., electricity, water, gas)
+     * @return a ResponseEntity containing the last meter values with additional data if the operation completes successfully.
+     *         If an error occurs, it returns a ResponseEntity containing an error message.
+     */
     @PostMapping(value = "/getLastMeterValues")
     public ResponseEntity<?> getLastMeterValues(
             @RequestHeader("API-KEY") String apiKey,
@@ -396,8 +404,6 @@ public class AdminController {
             String meterType = body.get("meterType");
 
             Map<String,Object>lastMeterValuesWithImages = userService.sendLastYearMeterValueWithImage(meterType, Long.valueOf(apartmentId));
-            lastMeterValuesWithImages.forEach((key, value) -> log.info("Key: {}, Value: {}", key, value));
-
 
             Map<String, String> lastMeterValues = userService.sendLastYearMeterValue(meterType, Long.valueOf(apartmentId));
             log.info("Last meter values retrieved successfully: " + lastMeterValues.toString());
@@ -410,15 +416,25 @@ public class AdminController {
         }
     }
 
+    /**
+     * Retrieves a list of all users in the system. This method checks whether
+     * the provided API key and authorization header grant administrator rights.
+     * If authorized, it fetches basic user details from the database. The response
+     * includes user ID, email, username, and enabled status, excluding sensitive information.
+     *
+     * @param apiKey the API key provided in the request header to authenticate the request
+     * @param authorizationHeader the authorization header containing user credentials or token for validation
+     * @return a ResponseEntity containing a list of users if the request is authorized, or an appropriate
+     *         HTTP status with no content or an error explanation if unauthorized or an exception occurs
+     */
     @GetMapping(value = "/getAllUsers")
-    public ResponseEntity<List<User>> getAllUsers(
+    public ResponseEntity<?>getAllUsers(
             @RequestHeader("API-KEY") String apiKey,
             @RequestHeader("Authorization") String authorizationHeader) {
 
         log.info("/getAllUsers endpoint called");
 
-        List<User> users;
-
+        List<UserListItemDto> users;
         try {
             String username = authenticationService.validateRequest(apiKey, authorizationHeader);
 
@@ -426,21 +442,13 @@ public class AdminController {
                 log.error("Only administrators can get information on users, user {} is not authorized.", username);
                 return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
             }
-
             users = userRepository.findAll().stream()
-                    .map(user -> {
-                        User basicUser = new User();
-                        basicUser.setId(user.getId());
-                        basicUser.setEmail(user.getEmail());
-                        basicUser.setUsername(user.getUsername());
-                        basicUser.setEnabled(user.isEnabled());
-                        return basicUser;
-                    })
-                    .toList();
-
-            if (users.isEmpty()) {
-                return new ResponseEntity<>(users, HttpStatus.NO_CONTENT);
-            }
+                    .map(user -> new UserListItemDto(
+                            user.getId(),
+                            user.getUsername(),
+                            user.getEmail(),
+                            user.getApartment().getId() != null ? user.getApartment().getId() : null
+                    )).collect(Collectors.toList());
 
         } catch (Exception e) {
             log.error("An error occurred during getting all users: {}", e.getMessage());
@@ -450,7 +458,15 @@ public class AdminController {
         return new ResponseEntity<>(users, HttpStatus.OK);
     }
 
-    @PostMapping(value = "deleteUser")
+    /**
+     * Deletes a user based on the provided user ID. This operation is restricted to administrators only.
+     *
+     * @param apiKey the API key provided in the request header for authentication
+     * @param authorizationHeader the authorization token provided in the request header
+     * @param deleteUserId the ID of the user to be deleted, passed in the request body
+     * @return a ResponseEntity containing a success or error message along with the appropriate HTTP status code
+     */
+    @PostMapping(value = "/deleteUser")
     public ResponseEntity<String> deleteUser (
             @RequestHeader("API-KEY") String apiKey,
             @RequestHeader("Authorization") String authorizationHeader,
@@ -466,11 +482,19 @@ public class AdminController {
                 return new ResponseEntity<>("Only administrators can delete a user, user " + username + " is not authorized.", HttpStatus.UNAUTHORIZED);
             }
 
-            if (userRepository.findById(Long.parseLong(deleteUserId)).isPresent()) {
+            Optional<User> userToDelete = userRepository.findById(Long.parseLong(deleteUserId));
+            if (userToDelete.isPresent()) {
+                User user = userToDelete.get();
+                if (user.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"))) {
+                    log.warn("Attempted to delete admin user with ID {}", deleteUserId);
+                    return new ResponseEntity<>("Admin users cannot be deleted", HttpStatus.FORBIDDEN);
+                }
                 userRepository.deleteById(Long.parseLong(deleteUserId));
                 log.info("User with the id {} deleted successfully", deleteUserId);
                 return new ResponseEntity<>(HttpStatus.OK);
             }
+            
+            
 
             log.info("User with the id {} could not be found", deleteUserId);
             return new ResponseEntity<>("User could not be found", HttpStatus.BAD_REQUEST);
@@ -481,11 +505,26 @@ public class AdminController {
         }
     }
 
+
+    /**
+     * Handles the request to edit an existing user in the system. This endpoint requires API key
+     * and authorization headers for authentication and permits only administrators to perform the operation.
+     * The method updates user details like username, email, and associated apartment, if provided.
+     *
+     * @param apiKey the system-generated API key passed in the request headers for validation
+     * @param authorizationHeader the authorization token from the request headers for validating the user's identity
+     * @param modifiedUser a data transfer object (DTO) containing the updated user details
+     * @return a ResponseEntity containing the result of the operation. The response could be:
+     *         - HTTP 200 (OK) with a message indicating the user was updated successfully
+     *         - HTTP 401 (Unauthorized) if the user is not allowed to perform this operation
+     *         - HTTP 404 (Not Found) if the user to be edited does not exist
+     *         - HTTP 500 (Internal Server Error) if an exception occurs while processing the request
+     */
     @PostMapping(value = "/editUser")
     public ResponseEntity<?> editUser (
             @RequestHeader("API-KEY") String apiKey,
             @RequestHeader("Authorization") String authorizationHeader,
-            @RequestBody User editedUser) {
+            @RequestBody UserListItemDto modifiedUser) {
 
         log.info("/editUser endpoint called");
 
@@ -497,16 +536,25 @@ public class AdminController {
                 return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
             }
 
-            Long apartmentId = editedUser.getId();
-            if (apartmentId == null || !userRepository.findById(apartmentId).isPresent()) {
-                log.warn("User with ID {} not found for editing.", apartmentId);
+            Long userId = modifiedUser.getId();
+            User originalUser = userRepository.findById(userId).orElse(null);
+            if (userId == null || !userRepository.findById(userId).isPresent()) {
+                log.warn("User with ID {} not found for editing.", userId);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("{\"message\": \"User not found for editing.\"}");
             }
+            assert originalUser != null;
+            log.info("User with ID {} ", originalUser.getApartment().getCity());
 
-            User updatedUser = userRepository.save(editedUser);
+            originalUser.setUsername(modifiedUser.getUsername());
+            originalUser.setEmail(modifiedUser.getEmail());
+            if (modifiedUser.getApartmentId() != null) {
+                Apartment apartment = apartmentRepository.findById(modifiedUser.getApartmentId()).orElse(null);
+                originalUser.setApartment(apartment);
+            }
+
+            User updatedUser = userRepository.save(originalUser);
             log.info("User updated successfully with ID: {}", updatedUser.getId());
             return new ResponseEntity<>(Map.of("message", "User updated successfully with ID: " + updatedUser.getId()), HttpStatus.OK);
-//            return new ResponseEntity<>("Apartment updated successfully with ID: " + updatedApartment.getId(), HttpStatus.OK);
 
         }catch(Exception e){
             log.error("An error occurred while saving the edited user {}", e.getMessage());
