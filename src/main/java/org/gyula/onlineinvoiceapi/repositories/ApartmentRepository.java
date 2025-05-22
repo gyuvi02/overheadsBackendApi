@@ -10,6 +10,12 @@ import java.util.List;
 import java.util.Map;
 
 
+/**
+ * Repository interface for managing Apartment entities.
+ * Extends JpaRepository to provide CRUD operations and custom queries
+ * related to apartment data, such as updating identifiers and retrieving
+ * meter values.
+ */
 public interface ApartmentRepository extends JpaRepository<Apartment, Long> {
 
     @Modifying

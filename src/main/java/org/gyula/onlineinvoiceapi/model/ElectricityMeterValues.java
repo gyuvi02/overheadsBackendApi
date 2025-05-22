@@ -4,6 +4,25 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
+/**
+ * Represents the electricity meter values associated with a specific apartment.
+ * This entity is mapped to the "electricity_meter_values" table in the database.
+ *
+ * Each instance corresponds to a record of electricity usage for a given apartment,
+ * including details like the recorded electricity value, the date of the recording,
+ * and whether it is the latest record.
+ *
+ * Fields:
+ * - id: Unique identifier for the record, automatically generated.
+ * - apartmentReference: The apartment entity to which this electricity meter value belongs.
+ * - electricityValue: The electricity meter reading value.
+ * - dateOfRecording: The date and time when the value was recorded.
+ * - latest: Indicates whether this record represents the latest reading for the apartment.
+ * - imageFile: An optional image file associated with the reading, stored as a byte array.
+ *
+ * This class provides getter and setter methods for all fields, enabling
+ * manipulation and retrieval of electricity meter data.
+ */
 @Entity
 @Table(name = "electricity_meter_values")
 public class ElectricityMeterValues {

@@ -6,8 +6,6 @@ import org.apache.logging.log4j.Logger;
 import org.gyula.onlineinvoiceapi.utils.JwtUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.util.Objects;
@@ -75,14 +73,17 @@ public class AuthenticationService {
 
         String username = JwtUtil.validateTokenAndExtractUsername(jwtToken);
 
-//        if (customUserDetailsService.loadUserByUsername(username).getAuthorities().stream()
-//                .noneMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"))) {
-//            String errorMessage = "Only administrator can send email, user " +  customUserDetailsService.loadUserByUsername(username).getUsername() + " is not authorized.";
-//            throw new Exception(errorMessage);
-//        }
         return username;
     }
 
+    /**
+     * Checks if a given username belongs to a user with administrative privileges.
+     * The method verifies if the user has the "ROLE_ADMIN" authority assigned.
+     * Logs an error message if the user does not have admin authority.
+     *
+     * @param username the username of the user to check for administrative privileges
+     * @return true if the user has administrative privileges; false otherwise
+     */
     public boolean checkAdminAuthority(String username) {
         if (customUserDetailsService.loadUserByUsername(username).getAuthorities().stream()
                 .noneMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"))) {
