@@ -63,7 +63,7 @@ public class AdminController {
     private UserService userService;
 
     @Autowired
-    private AdminService adminServce;
+    private AdminService adminService;
 
     @Autowired
     private AuthenticationService authenticationService;
@@ -111,7 +111,7 @@ public class AdminController {
             log.info("Apartment name: {}", apartmentName);
 
 
-            String link = adminServce.sendRegistrationEmail(email, apartmentName, body.get("apartment"));
+            String link = adminService.sendRegistrationEmail(email, apartmentName, body.get("apartment"));
             Map<String, String> response = new HashMap<>();
             response.put("message", "Email sent successfully");
             return ResponseEntity.ok(response);
@@ -363,10 +363,10 @@ public class AdminController {
                 return new ResponseEntity<>("Only administrators can get information on an apartment, user " + username + " is not authorized.", HttpStatus.UNAUTHORIZED);
             }
             if (Objects.equals(apartmentId.get("withImage"), "0")) {
-                allLatestValues = adminServce.getAllLatestValues(Long.parseLong(apartmentId.get("apartmentId")));
+                allLatestValues = adminService.getAllLatestValues(Long.parseLong(apartmentId.get("apartmentId")));
 
             }else{
-                allLatestValues = adminServce.getAllLatestValuesWithImages(Long.parseLong(apartmentId.get("apartmentId")));
+                allLatestValues = adminService.getAllLatestValuesWithImages(Long.parseLong(apartmentId.get("apartmentId")));
 
             }
             return ResponseEntity.ok(allLatestValues);

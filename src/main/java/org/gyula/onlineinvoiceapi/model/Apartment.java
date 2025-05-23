@@ -40,6 +40,9 @@ public class Apartment {
     @Column(name = "water_meterid")
     private String waterMeterID;
 
+    @Column(name = "deadline")
+    private String deadline;
+
     public Long getId() {
         return id;
     }
@@ -94,5 +97,13 @@ public class Apartment {
 
     public void setWaterMeterID(String waterMeterID) {
         this.waterMeterID = waterMeterID;
+    }
+
+    public String getDeadline() {
+        return deadline;
+    }
+
+    public void setDeadline(String deadline) {
+        this.deadline = deadline;
     }
 }

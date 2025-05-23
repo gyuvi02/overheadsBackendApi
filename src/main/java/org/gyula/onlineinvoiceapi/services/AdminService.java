@@ -6,6 +6,7 @@ import org.gyula.onlineinvoiceapi.config.TokenGenerator;
 import org.gyula.onlineinvoiceapi.model.Apartment;
 import org.gyula.onlineinvoiceapi.model.RegistrationToken;
 import org.gyula.onlineinvoiceapi.repositories.*;
+import org.gyula.onlineinvoiceapi.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.SimpleMailMessage;
@@ -44,6 +45,8 @@ public class AdminService {
     private WaterMeterRepository waterMeterRepository;
     @Autowired
     private ApartmentRepository apartmentRepository;
+    @Autowired
+    private UserRepository userRepository;
 
 
     /**
@@ -192,5 +195,17 @@ public class AdminService {
             log.error("Error retrieving latest values with images for apartment {}: {}", apartmentId, e.getMessage());
             throw e;
         }
+    }
+
+    public void sendReminderEmail(Apartment apartment) {
+        User user = userRepository.findByApartmentId(apartment.getId());
+
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(user.getEmail());
+        message.setSubject("Remainder: submit meter values");
+        message.setText("If you have not already done so, please record your meter readings on https://omegahouses.org website for your apartment " + apartment.getCity() + ", " + apartment.getStreet() + " in the next 48 hours");
+        message.setFrom(mailSendAddress);{}
+        log.info("Sending email from: {}", mailSendAddress + " to " + user.getEmail());
+        mailSender.send(message);
     }
 }
