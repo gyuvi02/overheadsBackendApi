@@ -5,6 +5,10 @@ import io.jsonwebtoken.SignatureAlgorithm;
 
 import java.util.Date;
 
+/**
+ * Utility class for handling JSON Web Tokens (JWTs).
+ * Provides methods to generate a new JWT and validate an existing one.
+ */
 public class JwtUtil {
 
     private static final String SECRET_KEY = "mhsJzZ9HpjbsAHFDi0KmIA40qe6XH2G/k+dRQ9AhN8HdPPWue5/3+mMGo4m54jderPzLziBdFf4tnGoPzAOg3w=="; // Use a strong, secure key

@@ -41,7 +41,7 @@ public class Apartment {
     private String waterMeterID;
 
     @Column(name = "deadline")
-    private String deadline;
+    private Short deadline;
 
     public Long getId() {
         return id;
@@ -99,11 +99,11 @@ public class Apartment {
         this.waterMeterID = waterMeterID;
     }
 
-    public String getDeadline() {
+    public Short getDeadline() {
         return deadline;
     }
 
-    public void setDeadline(String deadline) {
+    public void setDeadline(Short deadline) {
         this.deadline = deadline;
     }
 }

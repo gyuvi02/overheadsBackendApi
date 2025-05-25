@@ -2,8 +2,15 @@ package org.gyula.onlineinvoiceapi.services;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
+import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.checkerframework.checker.units.qual.C;
 import org.gyula.onlineinvoiceapi.config.TokenGenerator;
 import org.gyula.onlineinvoiceapi.model.Apartment;
+import org.gyula.onlineinvoiceapi.model.InvoiceItemDto;
 import org.gyula.onlineinvoiceapi.model.RegistrationToken;
 import org.gyula.onlineinvoiceapi.repositories.*;
 import org.gyula.onlineinvoiceapi.model.User;
@@ -13,11 +20,18 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.io.IOException;
+
 
 
 @SuppressWarnings("unused")
@@ -80,7 +94,7 @@ public class AdminService {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(userEmail);
             message.setSubject("Complete Your Registration for the apartment: " + apartmentName + "");
-            message.setText("Click the link to complete your registration: " + link + "\n\nThe link expires in 24 hours (" + LocalDateTime.now().plusDays(1).format(java.time.format.DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm")) + ")");
+            message.setText("Click the link to complete your registration: " + link + "\n\nThe link expires in 24 hours (" + LocalDateTime.now().plusDays(1).format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm")) + ")");
             message.setFrom(mailSendAddress);
             log.info("Sending email from: {}", mailSendAddress);
             mailSender.send(message);
@@ -208,4 +222,135 @@ public class AdminService {
         log.info("Sending email from: {}", mailSendAddress + " to " + user.getEmail());
         mailSender.send(message);
     }
+
+
+    public String createInvoicePdf(InvoiceItemDto invoiceData) throws RuntimeException{
+        String[] gasRow;
+        String[] electricityRow;
+        String[] waterRow;
+        List<String[]> rowList = new ArrayList<>();
+        List<String[]> otherCostsList = new ArrayList<>();
+
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage(PDRectangle.A4);
+            document.addPage(page);
+
+            PDPageContentStream contentStream = new PDPageContentStream(document, page);
+
+            // Set starting Y position and margins
+            float yStart = page.getMediaBox().getHeight() - 70;
+            float margin = 50;
+            float width = page.getMediaBox().getWidth() - 2 * margin;
+
+            contentStream.setFont(PDType1Font.HELVETICA_BOLD, 16);
+            float titleWidth = PDType1Font.HELVETICA_BOLD.getStringWidth(invoiceData.getApartmentAddress()) / 1000 * 16;
+            float xAddress = (page.getMediaBox().getWidth() - titleWidth) / 2;
+
+            contentStream.beginText();
+            contentStream.newLineAtOffset(xAddress, yStart);
+            contentStream.showText(invoiceData.getApartmentAddress());
+            contentStream.endText();
+
+            contentStream.setFont(PDType1Font.HELVETICA_BOLD, 12);
+            float warningWidth = PDType1Font.HELVETICA_BOLD.getStringWidth("Not an official invoice!") / 1000 * 12;
+            float xWarning = (page.getMediaBox().getWidth() - warningWidth) / 2;
+            yStart -= 30;
+            contentStream.beginText();
+            contentStream.newLineAtOffset(xWarning, yStart);
+            contentStream.showText("Not an official invoice!");
+            contentStream.endText();
+
+
+            // Space before table
+            float tableY = yStart - 40;
+
+            // Meter values table (Gas, Electricity, Water)
+            String[] meterHeaders = { "Type", "Previous value", "Current value", "Consumption", "Sum" };
+            if (invoiceData.getActualGas() != null && !invoiceData.getActualGas().equals("0")) rowList.add(new String[] {"Gas", invoiceData.getPreviousGas(), invoiceData.getActualGas(), String.valueOf(Integer.parseInt(invoiceData.getActualGas()) - Integer.parseInt(invoiceData.getPreviousGas())), invoiceData.getGasCost()});
+
+            if (invoiceData.getActualElectricity() != null && !invoiceData.getActualElectricity().equals("0")) rowList.add(new String[] { "Electricity", invoiceData.getPreviousElectricity(), invoiceData.getActualElectricity(), String.valueOf(Integer.parseInt(invoiceData.getActualElectricity()) - Integer.parseInt(invoiceData.getPreviousElectricity())), invoiceData.getElectricityCost()});
+
+            if (invoiceData.getActualWater() != null && !invoiceData.getActualWater().equals("0")) rowList.add(new String[] { "Water", invoiceData.getPreviousWater(), invoiceData.getActualWater(), String.valueOf(Integer.parseInt(invoiceData.getActualWater()) - Integer.parseInt(invoiceData.getPreviousWater())), invoiceData.getWaterCost()});
+
+            String[][] meterRows = rowList.toArray(new String[rowList.size()][]);
+
+            // Draw meter table
+            tableY = drawTable(document, page, contentStream, margin, tableY, meterHeaders, meterRows);
+
+            // Other data table (e.g., Service charges, Misc fees, etc.)
+            String[] otherHeaders = { "Item", "Amount" };
+            otherCostsList.add(new String[] {"Rent", invoiceData.getRent()});
+            if (invoiceData.getCleaning() != null && !invoiceData.getCleaning().equals("0")) otherCostsList.add(new String[] {"Cleaning", invoiceData.getCleaning()});
+            if (invoiceData.getCommonCost() != null && !invoiceData.getCommonCost().equals("0")) otherCostsList.add(new String[] {"Common cost", invoiceData.getCommonCost()});
+            if (invoiceData.getOtherSum() != null && !invoiceData.getOtherSum().equals("0")) otherCostsList.add(new String[] {invoiceData.getOtherText(), invoiceData.getOtherSum()});
+
+            String[][] otherRows = otherCostsList.toArray(new String[otherCostsList.size()][]);
+
+            tableY -= 30; // Space between tables
+
+            tableY = drawTable(document, page, contentStream, margin, tableY, otherHeaders, otherRows);
+
+            contentStream.setFont(PDType1Font.HELVETICA_BOLD, 16);
+            String totalLine = "Total Sum: " + invoiceData.getTotalSum();
+            float totalWidth = PDType1Font.HELVETICA_BOLD.getStringWidth(totalLine) / 1000 * 16;
+            float xTotal = page.getMediaBox().getWidth() - margin - totalWidth;
+            contentStream.beginText();
+            contentStream.newLineAtOffset(xTotal, (tableY - 50));
+            contentStream.showText(totalLine);
+            contentStream.endText();
+
+            contentStream.close();
+            String fileName = "Rent_" + invoiceData.getApartmentAddress() + "_" + LocalDate.now()+ ".pdf";
+            int commaIndex = invoiceData.getApartmentAddress().indexOf(",");
+            String addressCity = invoiceData.getApartmentAddress().substring(0, commaIndex);
+
+
+            Files.createDirectories(Paths.get("C:\\Users\\Szabó Gyula\\Downloads\\" + LocalDateTime.now().getYear() + "\\" + addressCity));
+            document.save("C:\\Users\\Szabó Gyula\\Downloads\\" + LocalDateTime.now().getYear() + "\\" + addressCity + "\\" +  fileName);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            document.save(out);
+            document.close();
+            InputStream is = new ByteArrayInputStream(out.toByteArray());
+            byte[] pdfArray = is.readAllBytes();
+            return Base64.getEncoder().encodeToString(pdfArray);
+
+        } catch (IOException e) {
+            log.error("Error creating invoice PDF: {}", e.getMessage());
+            throw new RuntimeException("Error creating invoice PDF: " + e.getMessage());
+        }
+    }
+
+    // Supporting method for drawing a simple table
+    private float drawTable(PDDocument doc, PDPage page, PDPageContentStream cs, float x, float y,
+                            String[] headers, String[][] content) throws IOException {
+        float rowHeight = 22f;
+        float tableWidth = page.getMediaBox().getWidth() - 1 * x;
+        float colWidth = tableWidth / headers.length;
+        float cellMargin = 3f;
+
+        // Draw headers
+        cs.setFont(PDType1Font.HELVETICA_BOLD, 12);
+        for (int i = 0; i < headers.length; ++i) {
+            cs.beginText();
+            cs.newLineAtOffset(x + i * colWidth + cellMargin, y);
+            cs.showText(headers[i]);
+            cs.endText();
+        }
+        y -= rowHeight;
+
+        // Draw rows
+        cs.setFont(PDType1Font.HELVETICA, 12);
+        for (String[] row : content) {
+            for (int i = 0; i < row.length; ++i) {
+                cs.beginText();
+                cs.newLineAtOffset(x + i * colWidth + cellMargin, y);
+                cs.showText(row[i] != null ? row[i] : "");
+                cs.endText();
+            }
+            y -= rowHeight;
+        }
+        return y;
+    }
+
+
 }

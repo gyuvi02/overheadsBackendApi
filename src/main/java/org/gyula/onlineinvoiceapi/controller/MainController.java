@@ -126,11 +126,12 @@ public class MainController {
 
                 // Find the apartment connected to the logged-in user
                 Optional<User> userOptional = userRepository.findByUsername(loginRequest.getUsername());
-
+                Apartment apartment = null;
                 if (userOptional.isPresent()) {
                     User user = userOptional.get();
-                    Apartment apartment = user.getApartment();
-
+                    if (user.getApartment() != null) {
+                        apartment = user.getApartment();
+                    }
                     if (apartment != null) {
                         // Convert apartment data to Map<String, String>
                         Map<String, String> apartmentData = new HashMap<>();
@@ -184,12 +185,10 @@ public class MainController {
 
                         return ResponseEntity.ok(response);
                     } else {
-                        // No apartment found for user
-                        // Check if user has ADMIN role
+
                         boolean isAdmin = userDetails.getAuthorities().stream()
                                 .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
 
-                        // Create response with token
                         Map<String, Object> response = new HashMap<>();
                         response.put("token", jwtToken);
                         response.put("message", "Login successful");
@@ -199,11 +198,9 @@ public class MainController {
                     }
                 } else {
                     // User not found (should not happen at this point)
-                    // Check if user has ADMIN role
                     boolean isAdmin = userDetails.getAuthorities().stream()
                             .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
 
-                    // Create response with token
                     Map<String, Object> response = new HashMap<>();
                     response.put("token", jwtToken);
                     response.put("message", "Login successful");
@@ -231,8 +228,6 @@ public class MainController {
      * and registering new users.
      *
      * @param apiKey the API key provided in the request header for authentication
-     * @param registerRequest the request body containing the user registration details
-     * @param token the registration token provided as a request parameter
      * @return a ResponseEntity containing the appropriate HTTP status code and a message.
      *         Possible responses are:
      *         - 201 (Created) if registration is successful
@@ -242,22 +237,22 @@ public class MainController {
      *         - 500 (Internal Server Error) if any unhandled error occurs during registration
      */
     @PostMapping(value = "/register")
-    public ResponseEntity<String> register(
+    public ResponseEntity<?> register(
             @RequestHeader("API-KEY") String apiKey,
-            @RequestBody RegisterRequest registerRequest,
-            @RequestParam("token") String token) {
+            @RequestBody RegisterRequest registerRequest
+            ) {
 
         log.info("/register endpoint called");
 
         try {
-            //limiting connections per second
             if (!userService.isAllowed()) {
                 throw new IllegalArgumentException("Rate limit exceeded. Try again later.");
             }
             if (authenticationService.checkApiKey(apiKey)) {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials or API key.");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Invalid credentials or API key."));
             }
-
+            // Token comes from request body
+            String token = registerRequest.getToken();
             Optional<RegistrationToken> optionalToken = tokenRepository.findByTokenAndIsUsedFalse(token);
 
             if (optionalToken.isPresent()) {
@@ -265,23 +260,28 @@ public class MainController {
 
                 // Check if the token is expired
                 if (validToken.getExpiration().toLocalDateTime().isBefore(LocalDateTime.now())) {
-                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Token has expired.");
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Token has expired."));
                 }
 
-                // Process registration (e.g., create user account)
+                userService.registerUser(registerRequest);
+
                 validToken.setIsUsed(true);
                 tokenRepository.save(validToken);
 
-                userService.registerUser(registerRequest);
                 log.info("User registered successfully.");
-                return ResponseEntity.status(HttpStatus.CREATED).body("User registered successfully.");
+                return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("message", "User registered successfully."));
             } else {
                 log.info("Registraion failed, invalid or already used token");
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Invalid or already used token.");
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Invalid or already used token."));
             }
 
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("An error occurred during registration.");
+        }catch (IllegalArgumentException iae) {
+            log.info("Registration failed: {}", iae.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", iae.getMessage()));
+
+        } catch(Exception e){
+            log.error("An error occurred during registration: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "An error occurred during registration."));
         }
     }
 

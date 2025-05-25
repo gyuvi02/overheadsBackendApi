@@ -4,6 +4,23 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
+/**
+ * The GasMeterValues class represents the recorded gas meter readings
+ * associated with apartments. It is mapped to the "gas_meter_values" table
+ * in the database and contains information such as the gas meter reading
+ * value, the associated apartment, the date of recording, and whether the
+ * record is the latest one.
+ *
+ * Each instance of this class corresponds to a single row in the "gas_meter_values" table.
+ *
+ * Attributes:
+ * - id: Auto-generated unique identifier for the gas meter reading entry.
+ * - apartmentReference: A reference to the associated apartment entity.
+ * - gasValue: The recorded gas meter reading value.
+ * - dateOfRecording: The timestamp of when the gas meter reading was recorded.
+ * - latest: A flag indicating if this is the latest reading for the apartment.
+ * - imageFile: Optional binary data for an image file associated with the record, stored in BYTEA format.
+ */
 @Entity
 @Table(name = "gas_meter_values")
 public class GasMeterValues {

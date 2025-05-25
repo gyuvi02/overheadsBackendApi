@@ -3,6 +3,7 @@ package org.gyula.onlineinvoiceapi.controller;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gyula.onlineinvoiceapi.model.Apartment;
+import org.gyula.onlineinvoiceapi.model.InvoiceItemDto;
 import org.gyula.onlineinvoiceapi.model.User;
 import org.gyula.onlineinvoiceapi.model.UserListItemDto;
 import org.gyula.onlineinvoiceapi.repositories.ApartmentRepository;
@@ -447,7 +448,7 @@ public class AdminController {
                             user.getId(),
                             user.getUsername(),
                             user.getEmail(),
-                            user.getApartment().getId() != null ? user.getApartment().getId() : null
+                            user.getApartment() != null ? user.getApartment().getId() : null
                     )).collect(Collectors.toList());
 
         } catch (Exception e) {
@@ -538,7 +539,7 @@ public class AdminController {
 
             Long userId = modifiedUser.getId();
             User originalUser = userRepository.findById(userId).orElse(null);
-            if (userId == null || !userRepository.findById(userId).isPresent()) {
+            if (!userRepository.findById(userId).isPresent()) {
                 log.warn("User with ID {} not found for editing.", userId);
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("{\"message\": \"User not found for editing.\"}");
             }
@@ -560,5 +561,30 @@ public class AdminController {
             log.error("An error occurred while saving the edited user {}", e.getMessage());
             return new ResponseEntity<>("An error occurred while saving the edited user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @PostMapping(value = "/createInvoice")
+    public ResponseEntity<?> createInvoice (
+            @RequestHeader("API-KEY") String apiKey,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody InvoiceItemDto invoiceData) {
+
+        log.info("/createInvoice endpoint called");
+
+        try{
+            String username = authenticationService.validateRequest(apiKey, authorizationHeader);
+
+            if(!authenticationService.checkAdminAuthority(username)){
+                log.error("Only administrators can create an invoice, user {} is not authorized.", username);
+                return new ResponseEntity<>("Only administrator can create an invoice, user " + username + " is not authorized.", HttpStatus.UNAUTHORIZED);
+            }
+            
+            String invoicePdf64 = adminService.createInvoicePdf(invoiceData);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>("An error occurred while creating the invoice: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+        return null;
     }
 }
