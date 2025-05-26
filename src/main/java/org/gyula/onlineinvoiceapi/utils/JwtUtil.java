@@ -2,6 +2,9 @@ package org.gyula.onlineinvoiceapi.utils;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
 
 import java.util.Date;
 
@@ -9,24 +12,32 @@ import java.util.Date;
  * Utility class for handling JSON Web Tokens (JWTs).
  * Provides methods to generate a new JWT and validate an existing one.
  */
+@Service
 public class JwtUtil {
 
-    private static final String SECRET_KEY = "mhsJzZ9HpjbsAHFDi0KmIA40qe6XH2G/k+dRQ9AhN8HdPPWue5/3+mMGo4m54jderPzLziBdFf4tnGoPzAOg3w=="; // Use a strong, secure key
+    private static String sKey = null;
+
+    //To inject a static value from the properties file
+    @Autowired
+    public JwtUtil(@Value("${spring.validation.key}") String sKey) {
+        this.sKey = sKey;
+    }
 
     public static String generateToken(String username, long expirationMillis) {
         return Jwts.builder()
                 .setSubject(username)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + expirationMillis))
-                .signWith(SignatureAlgorithm.HS512, SECRET_KEY)
+                .signWith(SignatureAlgorithm.HS512, sKey)
                 .compact();
     }
 
     public static String validateTokenAndExtractUsername(String token) {
         return Jwts.parser()
-                .setSigningKey(SECRET_KEY)
+                .setSigningKey(sKey)
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
     }
+
 }
