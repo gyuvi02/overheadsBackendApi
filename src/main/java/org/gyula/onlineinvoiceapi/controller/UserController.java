@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -181,9 +180,13 @@ public class UserController {
             authenticationService.validateRequest(apiKey, authorizationHeader);
             String apartmentId = body.get("apartmentId");
             String meterType = body.get("meterType");
+            
+            Map<String,Object>lastMeterValuesWithImages = userService.sendLastYearMeterValueWithImage(meterType, Long.valueOf(apartmentId));
+            lastMeterValuesWithImages.forEach((key, value) -> log.info("Key: {}, Value: {}", key, value));
+
 
             Map<String, String> lastMeterValues = userService.sendLastYearMeterValue(meterType, Long.valueOf(apartmentId));
-            log.info("Last meter values retrieved successfully: " + lastMeterValues.toString() );
+            log.info("Last meter values retrieved successfully: " + lastMeterValues.toString());
             return new ResponseEntity<>(lastMeterValues, HttpStatus.OK);
         } catch (Exception e) {
             log.error("An error occurred during getting last 12 meter values: {}", e.getMessage());

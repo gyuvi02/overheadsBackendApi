@@ -4,6 +4,22 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 
+/**
+ * Represents the water meter values recorded for a specific apartment.
+ * Each instance of this class corresponds to a single record in the water meter readings table.
+ *
+ * The class is an entity mapped to the "water_meter_values" database table
+ * and includes fields for attributes such as:
+ * - The unique identifier for the record
+ * - A reference to the associated apartment
+ * - The water meter reading value
+ * - The date when the value was recorded
+ * - A flag indicating whether this is the latest record
+ * - An optional image file representing a snapshot of the meter
+ *
+ * This class provides getter and setter methods for all fields, allowing easy
+ * manipulation and retrieval of water meter data.
+ */
 @Entity
 @Table(name = "water_meter_values")
 public class WaterMeterValues {

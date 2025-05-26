@@ -50,6 +50,10 @@ public class AdminService {
     private String mailSendAddress;
     @Value("${frontend.address}")
     private String frontendAddress;
+
+    @Value("${file.create.folder}")
+    private String createFolder;
+
     @Autowired
     private GasMeterRepository gasMeterRepository;
     @Autowired
@@ -304,9 +308,9 @@ public class AdminService {
             int commaIndex = invoiceData.getApartmentAddress().indexOf(",");
             String addressCity = invoiceData.getApartmentAddress().substring(0, commaIndex);
 
+            Files.createDirectories(Paths.get(createFolder + LocalDateTime.now().getYear() + "/" + addressCity));
+            document.save(createFolder + LocalDateTime.now().getYear() + "/" + addressCity + "/" + fileName);
 
-            Files.createDirectories(Paths.get("C:\\Users\\Szabó Gyula\\Downloads\\" + LocalDateTime.now().getYear() + "\\" + addressCity));
-            document.save("C:\\Users\\Szabó Gyula\\Downloads\\" + LocalDateTime.now().getYear() + "\\" + addressCity + "\\" +  fileName);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             document.save(out);
             document.close();

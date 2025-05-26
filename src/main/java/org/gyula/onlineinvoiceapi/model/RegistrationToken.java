@@ -1,10 +1,25 @@
 package org.gyula.onlineinvoiceapi.model;
 
 import jakarta.persistence.*;
-import org.apache.logging.log4j.Logger;
 
 import java.sql.Timestamp;
 
+/**
+ * Represents a registration token that is utilized for user registration
+ * or activation processes. This class is mapped to a database entity
+ * using JPA annotations.
+ *
+ * The RegistrationToken entity includes the following fields:
+ * - A unique identifier for the token.
+ * - The token value (a unique string).
+ * - A flag indicating whether the token has been used.
+ * - An expiration timestamp that specifies the validity period of the token.
+ * - An optional user email address to associate the token with a specific user.
+ *
+ * The class provides getter and setter methods for all its attributes.
+ * It is typically used to generate, manage, and validate registration
+ * tokens throughout the user registration lifecycle.
+ */
 @Entity
 public class RegistrationToken {
 

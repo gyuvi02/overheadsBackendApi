@@ -2,25 +2,17 @@ package org.gyula.onlineinvoiceapi.services;
 
 import com.google.common.util.concurrent.RateLimiter;
 import org.apache.logging.log4j.Logger;
-import org.gyula.onlineinvoiceapi.config.TokenGenerator;
 import org.gyula.onlineinvoiceapi.model.*;
 import org.gyula.onlineinvoiceapi.repositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.scheduling.support.SimpleTriggerContext;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import org.apache.logging.log4j.LogManager;
 import org.springframework.web.multipart.MultipartFile;
@@ -50,36 +42,39 @@ public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final RateLimiter loginRateLimiter;
-    private final JavaMailSender mailSender;
-//    private final ApplicationArguments springApplicationArguments;
+//    private final JavaMailSender mailSender;
 
     public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, RegistrationTokenRepository tokenRepository, JavaMailSender mailSender, ApplicationArguments springApplicationArguments) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.mailSender = mailSender;
+//        this.mailSender = mailSender;
         this.loginRateLimiter = RateLimiter.create(3.0);
-//        this.springApplicationArguments = springApplicationArguments;
     }
 
-    public User getUserByUsername(String username) throws RuntimeException{
-        log.info("In getUserByUsername: " + username);
-        try {
-            return userRepository.findByUsername(username).orElse(null);
-        }catch (Exception e){
-            log.error("An error occurred during getUserByUsername: {}", e.getMessage());
-            throw new RuntimeException("Couldn't find email for the user " + username);
+    /**
+     * Registers a new user in the system based on the provided registration details.
+     *
+     * @param registerRequest the request containing user registration details such as username, email, password,
+     *                        and apartment ID
+     * @throws IllegalArgumentException if the username already exists, the provided apartment ID does not exist,
+     *                                  or an error occurs during registration
+     */
+    public void registerUser(RegisterRequest registerRequest) throws IllegalArgumentException {
+        log.info("In registerUser");
+
+        if (userRepository.findByUsername(registerRequest.getUsername()).isPresent()) {
+            throw new IllegalArgumentException("Username already exists");
         }
-    }
-
-    public void registerUser(RegisterRequest registerRequest) {
         log.info("In registerUser");
 
         try {
-            User user = new User();
+            User user = new User();            
             user.setEmail(registerRequest.getEmail());
             user.setUsername(registerRequest.getUsername());
             user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));  // Encrypt the password
             user.setEnabled(true);
+            Apartment userApartment = apartmentRepository.findById(Long.parseLong(registerRequest.getApartmentId())).orElseThrow(() -> new IllegalArgumentException("Apartment not found with id: " + registerRequest.getApartmentId()));
+            user.setApartment(userApartment);
 
             //Adding USER role as default
             Authority authority = new Authority();
@@ -93,6 +88,7 @@ public class UserService {
             log.info("User {} registered successfully.", user.getUsername());
         }catch (Exception e){
             log.error("An error occurred during registration: {}", e.getMessage());
+            throw new IllegalArgumentException("An error occurred during registration: " + e.getMessage());
         }
 
     }
@@ -108,12 +104,20 @@ public class UserService {
 //        return passwordEncoder.matches(rawPassword, user.getPassword());  // Authentication successful
 //    }
 
-
-
     public boolean isAllowed() {
         return loginRateLimiter.tryAcquire(); // Check if the request can proceed
     }
 
+    /**
+     * Adds a new meter value for the specified meter type and associates it with an apartment reference.
+     * Depending on the meter type, it updates the respective repository and database table to track the latest meter value.
+     *
+     * @param meterType the type of meter (e.g., "gas", "electricity", or "water")
+     * @param values a map containing the data required for the meter value, including "apartmentId" and "meterValue"
+     * @param file an optional file containing additional information (e.g., an image file) associated with the meter value
+     * @throws IllegalArgumentException if the `values` map is null or empty, or if the provided meterType is invalid
+     * @throws Exception if an error occurs during the operation, such as file processing or database update issues
+     */
     public void addMeterValue(String meterType, Map<String, String> values, MultipartFile file) throws Exception {
         if (values == null || values.isEmpty()) {
             throw new IllegalArgumentException("Values map cannot be null or empty");
@@ -187,7 +191,17 @@ public class UserService {
         }
     }
 
-    //sends the latest gas/electricity/water meter value submitted for an apartment
+    /**
+     * Retrieves the most recent meter value for the specified meter type and apartment ID.
+     * The method queries active meter values for the given apartment and returns the corresponding
+     * meter value if available.
+     *
+     * @param meterType the type of meter for which the value is to be retrieved. Valid values are "gas", "electricity", and "water".
+     * @param apartmentId the ID of the apartment whose meter value is being requested.
+     * @return the most recent meter value as a String for the specified meter type and apartment ID.
+     * @throws Exception if the meterType is invalid, no meter value is found for the apartment,
+     *                   or if any other error occurs during the retrieval process.
+     */
     public String sendOldMeterValue(String meterType, Long apartmentId) throws Exception {
 
         List<Map<String, Object>> foundMeterValues;
@@ -213,7 +227,16 @@ public class UserService {
         }
     }
 
-    //returns the last 12 gas/electricity/water meter values submitted for an apartment
+    /**
+     * Retrieves the last 12 meter values submitted for a specified type of meter
+     * (gas, electricity, or water) for a given apartment.
+     *
+     * @param meterType the type of meter for which the values are retrieved. Acceptable values are "gas", "electricity", and "water".
+     * @param apartmentId the unique identifier of the apartment for which the meter values are to be fetched.
+     * @return a map where the keys are the dates of recording (in their string representation),
+     *         and the values are the corresponding meter readings.
+     * @throws Exception if an invalid meter type is provided or if any issue occurs while retrieving the data.
+     */
     public Map<String, String> sendLastYearMeterValue(String meterType, Long apartmentId) throws Exception {
         List<Map<String, Object>> result = null;
         switch (meterType) {
@@ -234,6 +257,42 @@ public class UserService {
         return resultMap;
     }
 
+    /**
+     * Retrieves the last year's meter values along with associated images for a given apartment and meter type.
+     * The data is sorted by the recording date in descending order.
+     *
+     * @param meterType The type of meter for which to retrieve values. Options are "gas", "electricity", or "water".
+     * @param apartmentId The ID of the apartment to fetch meter values for.
+     * @return A map containing the recorded meter values and associated data. Keys are formatted as "date_<recording_date>"
+     *         and values contain a map with the meter value, recording date, and an optional image file.
+     * @throws Exception If an invalid meterType is provided or if an issue occurs during data retrieval.
+     */
+    public Map<String, Object> sendLastYearMeterValueWithImage(String meterType, Long apartmentId) throws Exception {
+        List<Map<String, Object>> result = null;
+        switch (meterType) {
+            case "gas" -> {result = apartmentRepository.findLatestGasMeterValues(apartmentId);}
+            case "electricity" -> {result = apartmentRepository.findLatestElectricityMeterValues(apartmentId);}
+            case "water" -> {result = apartmentRepository.findLatestWaterMeterValues(apartmentId);}
+            default -> throw new Exception("Invalid meterType: " + meterType);
+        }
 
+        Map<String, Object> resultMap = new LinkedHashMap<>();
+        result.stream()
+                .sorted((m1, m2) -> m2.get("date_of_recording").toString().compareTo(m1.get("date_of_recording").toString()))
+                .forEach(map -> {
+                    log.info("Found meter value: {} for date: ", map.get(meterType + "_value"));
+                    Map<String, Object> valueMap = new HashMap<>();
+                    valueMap.put("value", map.get(meterType + "_value"));
+                    valueMap.put("date", map.get("date_of_recording"));
+                    if (map.get("image_file") != null) {
+                        valueMap.put("image", map.get("image_file"));
+                    }else{
+                        valueMap.put("image", null);
+                    }
+                    resultMap.put("date_" + map.get("date_of_recording"), valueMap);
+                });
+
+        return resultMap;
+    }
 }
 

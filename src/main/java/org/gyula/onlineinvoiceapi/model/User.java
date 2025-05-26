@@ -4,6 +4,13 @@ import jakarta.persistence.*;
 
 import java.util.Set;
 
+/**
+ * Represents a user entity in the application with details such as email, username, password,
+ * enabled status, authorities, and optionally an associated apartment.
+ *
+ * This class is mapped to the "users" table in the database.
+ * It uses JPA annotations to define the entity structure and relationships with other entities.
+ */
 @Entity
 @Table(name = "users")
 public class User {
@@ -28,9 +35,8 @@ public class User {
     @JoinColumn(name = "apartment", referencedColumnName = "id", nullable = true)
     private Apartment apartment;
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     private Set<Authority> authorities;
-
 
     public Long getId() {
         return id;
@@ -87,5 +93,5 @@ public class User {
     public void setApartment(Apartment apartment) {
         this.apartment = apartment;
     }
-}
 
+}
