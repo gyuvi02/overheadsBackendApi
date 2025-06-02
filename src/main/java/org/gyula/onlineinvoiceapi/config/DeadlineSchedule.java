@@ -8,13 +8,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.scheduling.annotation.Scheduled;
 import java.time.LocalDate;
 import java.util.List;
-import org.gyula.onlineinvoiceapi.model.Apartment;
+
 import org.gyula.onlineinvoiceapi.repositories.ApartmentRepository;
 
 
 
 @Component
-public class deadlineSchedule {
+public class DeadlineSchedule {
 
     @Autowired
     private AdminService adminService;

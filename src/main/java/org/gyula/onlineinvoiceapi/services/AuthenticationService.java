@@ -43,6 +43,8 @@ public class AuthenticationService {
     }
 
     public boolean checkApiKey(String providedApiKey) {
+        log.info("provided API key: {}", providedApiKey);
+        log.info("apiKey: {}", apiKey);
         if (!Objects.equals(providedApiKey, apiKey)) {
             log.error("Invalid credentials or API key.");
             return true;
