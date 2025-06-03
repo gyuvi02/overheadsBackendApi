@@ -24,6 +24,7 @@ public class InvoiceItemDto {
     private String otherText;
     private String otherSum;
     private String totalSum;
+    private String language;
 
     public InvoiceItemDto(String rent, String previousGas, String actualGas, String gasCost, String previousElectricity, String actualElectricity, String electricityCost, String previousWater, String actualWater, String waterCost, String cleaning, String commonCost, String totalSum) {
         this.rent = rent;
@@ -223,5 +224,13 @@ public class InvoiceItemDto {
 
     public void setOtherSum(String otherSum) {
         this.otherSum = otherSum;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
     }
 }
