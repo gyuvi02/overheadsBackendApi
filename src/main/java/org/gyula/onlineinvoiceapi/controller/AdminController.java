@@ -249,6 +249,10 @@ public class AdminController {
             return new ResponseEntity<>(null, HttpStatus.UNAUTHORIZED);
         }
 
+        apartments.forEach(apartment -> {
+            log.info("Apartment with language {} retrieved successfully", apartment.getLanguage());
+        });
+
         return new ResponseEntity<>(apartments, HttpStatus.OK);
     }
 

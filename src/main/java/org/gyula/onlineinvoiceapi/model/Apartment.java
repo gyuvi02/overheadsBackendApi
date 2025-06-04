@@ -43,6 +43,9 @@ public class Apartment {
     @Column(name = "deadline")
     private Short deadline;
 
+    @Column(name = "language")
+    private char language;
+
     public Long getId() {
         return id;
     }
@@ -105,5 +108,13 @@ public class Apartment {
 
     public void setDeadline(Short deadline) {
         this.deadline = deadline;
+    }
+
+    public char getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(char language) {
+        this.language = language;
     }
 }
