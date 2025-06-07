@@ -238,7 +238,7 @@ public class UserService {
      * @throws Exception if an invalid meter type is provided or if any issue occurs while retrieving the data.
      */
     public Map<String, String> sendLastYearMeterValue(String meterType, Long apartmentId) throws Exception {
-        List<Map<String, Object>> result = null;
+        List<Map<String, Object>> result;
         switch (meterType) {
             case "gas" -> {result = apartmentRepository.findLatestGasMeterValues(apartmentId); break;}
             case "electricity" -> {result = apartmentRepository.findLatestElectricityMeterValues(apartmentId); break;}
@@ -250,7 +250,6 @@ public class UserService {
         result.stream()
                 .sorted((m1, m2) -> m2.get("date_of_recording").toString().compareTo(m1.get("date_of_recording").toString()))
                 .forEach(map -> {
-                    log.info("Found meter value: " + map.get("date_of_recording") + " " + map.get(meterType + "_value"));
                     resultMap.put(map.get("date_of_recording").toString(), map.get(meterType + "_value").toString());
                 });
 

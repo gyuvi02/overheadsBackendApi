@@ -20,13 +20,13 @@ public class InvoiceItemDto {
     private String actualWaterDate;
     private String waterCost;
     private String cleaning;
-    private String commonCost;
+    private String maintenanceFee;
     private String otherText;
     private String otherSum;
     private String totalSum;
     private String language;
 
-    public InvoiceItemDto(String rent, String previousGas, String actualGas, String gasCost, String previousElectricity, String actualElectricity, String electricityCost, String previousWater, String actualWater, String waterCost, String cleaning, String commonCost, String totalSum) {
+    public InvoiceItemDto(String rent, String previousGas, String actualGas, String gasCost, String previousElectricity, String actualElectricity, String electricityCost, String previousWater, String actualWater, String waterCost, String cleaning, String maintenanceFee, String totalSum) {
         this.rent = rent;
         this.previousGas = previousGas;
         this.actualGas = actualGas;
@@ -38,7 +38,7 @@ public class InvoiceItemDto {
         this.actualWater = actualWater;
         this.waterCost = waterCost;
         this.cleaning = cleaning;
-        this.commonCost = commonCost;
+        this.maintenanceFee = maintenanceFee;
         this.totalSum = totalSum;
     }
 
@@ -131,11 +131,11 @@ public class InvoiceItemDto {
     }
 
     public String getCommonCost() {
-        return commonCost;
+        return maintenanceFee;
     }
 
     public void setCommonCost(String commonCost) {
-        this.commonCost = commonCost;
+        this.maintenanceFee = commonCost;
     }
 
     public String getTotalSum() {
