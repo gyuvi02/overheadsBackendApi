@@ -2,10 +2,7 @@ package org.gyula.onlineinvoiceapi.controller;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.gyula.onlineinvoiceapi.model.Apartment;
-import org.gyula.onlineinvoiceapi.model.InvoiceItemDto;
-import org.gyula.onlineinvoiceapi.model.User;
-import org.gyula.onlineinvoiceapi.model.UserListItemDto;
+import org.gyula.onlineinvoiceapi.model.*;
 import org.gyula.onlineinvoiceapi.repositories.ApartmentRepository;
 
 import java.util.Optional;
@@ -103,16 +100,22 @@ public class AdminController {
                 log.error("Only administrator can send email, user {} is not authorized.", username);
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(username + " is not authorized to send email.");
             }
+            Apartment apartment = apartmentRepository.findById(Long.parseLong(body.get("apartment"))).orElse(null);
+            if (apartment == null) {
+                log.warn("Apartment with ID {} was not found", body.get("apartment"));
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Apartment not found");
+            }
 
             String email = body.get("email");
             log.info("Sending email to user {}", email);
-            String apartmentName = apartmentRepository.findById(Long.parseLong(body.get("apartment")))
-                    .map(apt -> apt.getCity() + " " + apt.getStreet())
-                    .orElse("");
+            String apartmentName = apartment.getCity() + " " + apartment.getStreet();
+//            String apartmentName = apartmentRepository.findById(Long.parseLong(body.get("apartment")))
+//                    .map(apt -> apt.getCity() + " " + apt.getStreet())
+//                    .orElse("");
+            String apartmentLanguage = String.valueOf(apartment.getLanguage());
             log.info("Apartment name: {}", apartmentName);
 
-
-            String link = adminService.sendRegistrationEmail(email, apartmentName, body.get("apartment"));
+            String link = adminService.sendRegistrationEmail(email, apartmentName, body.get("apartment"), apartmentLanguage);
             Map<String, String> response = new HashMap<>();
             response.put("message", "Email sent successfully");
             return ResponseEntity.ok(response);
@@ -359,7 +362,7 @@ public class AdminController {
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody Map<String, String> apartmentId) {
         log.info("/getAllLastMeterValues endpoint called");
-        Map<String, Object> allLatestValues = new HashMap<>();
+        Map<String, Object> allLatestValues;
         try{
             String username = authenticationService.validateRequest(apiKey, authorizationHeader);
             log.info("User {} is trying to retriev all last meter values for apartment {}", username, apartmentId.get("apartmentId"));
@@ -584,11 +587,119 @@ public class AdminController {
             }
             
             String invoicePdf64 = adminService.createInvoicePdf(invoiceData);
+            log.info("Invoice created successfully: {}", invoiceData.getEmail());
+            return new ResponseEntity<>(Map.of("message", "Invoice created successfully",
+                    "invoicePdf64", invoicePdf64,
+                    "email", invoiceData.getEmail(),
+                    "language", invoiceData.getLanguage(),
+                    "apartmentAddress", invoiceData.getApartmentAddress()),
+                    HttpStatus.OK);
 
         } catch (Exception e) {
             return new ResponseEntity<>("An error occurred while creating the invoice: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
-        return null;
+    }
+
+    @PostMapping(value = "/getUserByApartmentId")
+    public ResponseEntity<Map<String, String>> getUserByApartmentId(
+            @RequestHeader("API-KEY") String apiKey,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody Map<String, String> apartmentId){
+
+        log.info("/getUserByApartmentId endpoint called");
+
+        try{
+            String username = authenticationService.validateRequest(apiKey, authorizationHeader);
+
+            if(!authenticationService.checkAdminAuthority(username)){
+                log.error("Only administrators can get the user, user {} is not authorized.", username);
+                Map<String, String> errorResponse = new HashMap<>();
+                errorResponse.put("error", "Only administrator can get the user, user " + username + " is not authorized.");
+                return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+            }
+
+            User user = userRepository.findByApartmentId(Long.parseLong(apartmentId.get("apartmentId")));
+            if (user == null) {
+                log.warn("No user is connected to this apartment: {}", apartmentId.get("apartmentId"));
+                Map<String, String> userNotFound = new HashMap<>();
+                userNotFound.put("error", "No user is connected to this apartment");
+                return new ResponseEntity<>(userNotFound, HttpStatus.NOT_FOUND);
+            }
+            log.info("User email: {}", user.getEmail());
+
+            Map<String, String> response = new HashMap<>();
+            response.put("email", user.getEmail());
+            return new ResponseEntity<>(response, HttpStatus.OK);
+
+        } catch (Exception e) {
+            Map<String, String> errorResponse = new HashMap<>();
+            errorResponse.put("error", "An error occurred while searching for the user: " + e.getMessage());
+            return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+    }
+
+    @PostMapping(value = "/getLast2values")
+    public ResponseEntity<?> getLast2values(
+            @RequestHeader("API-KEY") String apiKey,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody Map<String, String> apartmentId){
+
+        log.info("/getLast2values endpoint called");
+
+        try{
+            String username = authenticationService.validateRequest(apiKey, authorizationHeader);
+
+            if(!authenticationService.checkAdminAuthority(username)){
+                log.error("Only administrators can get the user, user {} is not authorized.", username);
+                return new ResponseEntity<>("Only administrator can get the user, user " + username + " is not authorized.", HttpStatus.UNAUTHORIZED);
+            }
+
+            log.info("Apartment id: {}", apartmentId);
+
+            Map<String, Map<String, String>> results = adminService.getLast2MeterValues(Long.parseLong(apartmentId.get("apartmentId")));
+
+            log.info("Results: {}", results);
+
+            return new ResponseEntity<>(Map.of("results", results), HttpStatus.OK);
+
+        } catch (Exception e) {
+            return new ResponseEntity<>("An error occurred while searching for the user: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+    }
+
+    @PostMapping(value = "/sendPdfEmail")
+    public ResponseEntity<Map<String, String>> sendPdfEmail(
+            @RequestHeader("API-KEY") String apiKey,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody emailPdfDTO requestPdf){
+        log.info("/sendPdfEmail endpoint called");
+
+        try {
+            String username = authenticationService.validateRequest(apiKey, authorizationHeader);
+
+            if(!authenticationService.checkAdminAuthority(username)){
+                log.error("Only administrators can get the user, user {} is not authorized.", username);
+                return new ResponseEntity<>(Map.of("error", "Only administrator can get the user, user " + username + " is not authorized."), HttpStatus.UNAUTHORIZED);
+            }
+
+            log.info("Request email: {}", requestPdf.getEmail());
+
+            String response;
+            try {
+                response = adminService.sendEmailPdf(requestPdf.getEmail(), requestPdf.getApartmentAddress(), requestPdf.getLanguage(), requestPdf.getPdfBase64());
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            log.info("Sent email to the address {}", requestPdf.getEmail());
+
+            return new ResponseEntity<>(Map.of("message", response), HttpStatus.OK);
+
+        }catch (Exception e){
+            log.error("An error occurred while sending the email {}", e.getMessage());
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }

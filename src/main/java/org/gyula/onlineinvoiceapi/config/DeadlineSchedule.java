@@ -36,8 +36,12 @@ public class DeadlineSchedule {
 
         for (Apartment apartment : apartments) {
             if (apartment.getDeadline() != null && String.valueOf(apartment.getDeadline()).equals(today)) {
-                adminService.sendReminderEmail(apartment);
-                log.info("Reminder email sent for apartment: " + apartment.getId());
+                try {
+                    adminService.sendReminderEmail(apartment);
+                    log.info("Reminder email sent for apartment: " + apartment.getId());
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
 
