@@ -42,6 +42,18 @@ public interface ApartmentRepository extends JpaRepository<Apartment, Long> {
     @Query(value = "SELECT * FROM water_meter_values WHERE apartment_reference = :apartmentId AND latest = true ORDER BY date_of_recording DESC LIMIT 3", nativeQuery = true)
     List<Map<String, Object>> findActiveWaterMeterValues(@Param("apartmentId") Long apartmentId);
 
+    @Query(value = "SELECT gas_unit_price FROM apartments WHERE id = :currentId", nativeQuery = true)
+    Integer findGasUnitPrice(@Param("currentId") Long currentId);
+
+    @Query(value = "SELECT electricity_unit_price FROM apartments WHERE id = :currentId", nativeQuery = true)
+    Integer findElectricityUnitPrice(@Param("currentId") Long currentId);
+
+    @Query(value = "SELECT water_unit_price FROM apartments WHERE id = :currentId", nativeQuery = true)
+    Integer findWaterUnitPrice(@Param("currentId") Long currentId);
+
+
+
+
 
 
 }

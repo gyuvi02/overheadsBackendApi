@@ -46,6 +46,21 @@ public class Apartment {
     @Column(name = "language")
     private char language;
 
+    @Column(name = "rent")
+    private Integer rent;
+
+    @Column(name = "maintenance_fee")
+    private Integer maintenanceFee;
+
+    @Column(name = "gas_unit_price")
+    private Integer gasUnitPrice;
+
+    @Column(name = "electricity_unit_price")
+    private Integer electricityUnitPrice;
+
+    @Column(name = "water_unit_price")
+    private Integer waterUnitPrice;
+
     public Long getId() {
         return id;
     }
@@ -116,5 +131,45 @@ public class Apartment {
 
     public void setLanguage(char language) {
         this.language = language;
+    }
+
+    public Integer getRent() {
+        return rent;
+    }
+
+    public void setRent(Integer rent) {
+        this.rent = rent;
+    }
+
+    public Integer getMaintenanceFee() {
+        return maintenanceFee;
+    }
+
+    public void setMaintenanceFee(Integer maintenanceFee) {
+        this.maintenanceFee = maintenanceFee;
+    }
+
+    public Integer getGasUnitPrice() {
+        return gasUnitPrice;
+    }
+
+    public void setGasUnitPrice(Integer gasUnitPrice) {
+        this.gasUnitPrice = gasUnitPrice;
+    }
+
+    public Integer getElectricityUnitPrice() {
+        return electricityUnitPrice;
+    }
+
+    public void setElectricityUnitPrice(Integer electricityUnitPrice) {
+        this.electricityUnitPrice = electricityUnitPrice;
+    }
+
+    public Integer getWaterUnitPrice() {
+        return waterUnitPrice;
+    }
+
+    public void setWaterUnitPrice(Integer waterUnitPrice) {
+        this.waterUnitPrice = waterUnitPrice;
     }
 }
