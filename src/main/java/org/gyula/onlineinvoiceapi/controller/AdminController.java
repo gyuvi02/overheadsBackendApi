@@ -275,7 +275,8 @@ public class AdminController {
     public ResponseEntity<?> editApartment (
             @RequestHeader("API-KEY") String apiKey,
             @RequestHeader("Authorization") String authorizationHeader,
-            @RequestBody Apartment editedApartment) {
+            @RequestBody Apartment editedApartment,
+            @RequestParam String meterType) {
 
         log.info("/editApartment endpoint called");
 
@@ -293,9 +294,18 @@ public class AdminController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("{\"message\": \"Apartment not found for editing.\"}");
             }
 
-            Apartment updatedApartment = apartmentRepository.save(editedApartment);
-            log.info("Apartment updated successfully with ID: {}", updatedApartment.getId());
-            return new ResponseEntity<>(Map.of("message", "Apartment updated successfully with ID: " + updatedApartment.getId()), HttpStatus.OK);
+            if (meterType.equals("null")) {     // "Normal" update
+                apartmentRepository.save(editedApartment);
+                log.info("Apartment updated successfully with ID: {}", apartmentId);
+                return new ResponseEntity<>(Map.of("message", "Apartment updated successfully with ID: " + apartmentId), HttpStatus.OK);
+            }else {     // Update because one of the meters was changed
+                log.info("A new {} meter is to be registered for apartment with ID: {}", meterType, apartmentId);
+                Map<String,String> meterMap = Map.of("meterValue", "0", "apartmentId", apartmentId.toString());
+                userService.addMeterValue(meterType, meterMap, null);
+                apartmentRepository.save(editedApartment);
+                return new ResponseEntity<>(Map.of("message", "Apartment updated successfully with ID: " + apartmentId), HttpStatus.OK);
+
+            }
 
         }catch(Exception e){
             log.error("An error occurred while saving the edited apartment {}", e.getMessage());
@@ -652,8 +662,8 @@ public class AdminController {
             String username = authenticationService.validateRequest(apiKey, authorizationHeader);
 
             if(!authenticationService.checkAdminAuthority(username)){
-                log.error("Only administrators can get the user, user {} is not authorized.", username);
-                return new ResponseEntity<>("Only administrator can get the user, user " + username + " is not authorized.", HttpStatus.UNAUTHORIZED);
+                log.error("Only administrators can get the meter values, user {} is not authorized.", username);
+                return new ResponseEntity<>("Only administrator can get the meter values, user " + username + " is not authorized.", HttpStatus.UNAUTHORIZED);
             }
 
             log.info("Apartment id: {}", apartmentId);
@@ -681,8 +691,8 @@ public class AdminController {
             String username = authenticationService.validateRequest(apiKey, authorizationHeader);
 
             if(!authenticationService.checkAdminAuthority(username)){
-                log.error("Only administrators can get the user, user {} is not authorized.", username);
-                return new ResponseEntity<>(Map.of("error", "Only administrator can get the user, user " + username + " is not authorized."), HttpStatus.UNAUTHORIZED);
+                log.error("Only administrators can send the pdf document, user {} is not authorized.", username);
+                return new ResponseEntity<>(Map.of("error", "Only administrator send the pdf document, user " + username + " is not authorized."), HttpStatus.UNAUTHORIZED);
             }
 
             log.info("Request email: {}", requestPdf.getEmail());
@@ -699,6 +709,36 @@ public class AdminController {
 
         }catch (Exception e){
             log.error("An error occurred while sending the email {}", e.getMessage());
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PostMapping(value = "/newMeterInstalled")
+    public ResponseEntity<?> newMeterInstalled(
+            @RequestHeader("API-KEY") String apiKey,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody Apartment modifiedApartment ){
+        log.info("/newMeterInstalled endpoint called");
+
+        try {
+            String username = authenticationService.validateRequest(apiKey, authorizationHeader);
+
+            if(!authenticationService.checkAdminAuthority(username)){
+                log.error("Only administrators can register the new meter, user {} is not authorized.", username);
+                return new ResponseEntity<>(Map.of("error", "Only administrator can register the new meter, user " + username + " is not authorized."), HttpStatus.UNAUTHORIZED);
+            }
+
+            String response = "";
+            try {
+
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
+            return new ResponseEntity<>(Map.of("message", response), HttpStatus.OK);
+
+        }catch (Exception e){
+            log.error("An error occurred while registering the new meter {}", e.getMessage());
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
