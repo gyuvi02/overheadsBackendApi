@@ -300,6 +300,8 @@ public class AdminController {
                 return new ResponseEntity<>(Map.of("message", "Apartment updated successfully with ID: " + apartmentId), HttpStatus.OK);
             }else {     // Update because one of the meters was changed
                 log.info("A new {} meter is to be registered for apartment with ID: {}", meterType, apartmentId);
+                //First, I nned to save the final consumption value for the old meter
+                
                 Map<String,String> meterMap = Map.of("meterValue", "0", "apartmentId", apartmentId.toString());
                 userService.addMeterValue(meterType, meterMap, null);
                 apartmentRepository.save(editedApartment);
