@@ -48,6 +48,9 @@ public class GasMeterValues {
     @Column(name = "image_file", columnDefinition = "BYTEA", nullable = true)
     private byte[] imageFile;
 
+    @Column(name = "consumption", nullable = true)
+    private Integer consumption;
+
 
     // Getters and Setters
     public Long getId() {
@@ -98,4 +101,11 @@ public class GasMeterValues {
         this.imageFile = imageFile;
     }
 
+    public Integer getConsumption() {
+        return consumption;
+    }
+
+    public void setConsumption(Integer consumption) {
+        this.consumption = consumption;
+    }
 }

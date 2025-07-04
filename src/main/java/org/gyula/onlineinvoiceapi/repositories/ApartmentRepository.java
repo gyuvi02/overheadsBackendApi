@@ -32,6 +32,9 @@ public interface ApartmentRepository extends JpaRepository<Apartment, Long> {
     @Query(value = "SELECT * FROM water_meter_values WHERE apartment_reference = :apartmentId ORDER BY date_of_recording DESC LIMIT 12", nativeQuery = true)
     List<Map<String, Object>> findLatestWaterMeterValues(Long apartmentId);
 
+    @Query(value = "SELECT * FROM heating_meter_values WHERE apartment_reference = :apartmentId ORDER BY date_of_recording DESC LIMIT 12", nativeQuery = true)
+    List<Map<String, Object>> findLatestHeatingMeterValues(Long apartmentId);
+
 
     @Query(value = "SELECT * FROM electricity_meter_values WHERE apartment_reference = :apartmentId AND latest = true ORDER BY date_of_recording DESC LIMIT 3", nativeQuery = true)
     List<Map<String, Object>> findActiveElectricityMeterValues(@Param("apartmentId") Long apartmentId);
@@ -42,6 +45,9 @@ public interface ApartmentRepository extends JpaRepository<Apartment, Long> {
     @Query(value = "SELECT * FROM water_meter_values WHERE apartment_reference = :apartmentId AND latest = true ORDER BY date_of_recording DESC LIMIT 3", nativeQuery = true)
     List<Map<String, Object>> findActiveWaterMeterValues(@Param("apartmentId") Long apartmentId);
 
+    @Query(value = "SELECT * FROM heating_meter_values WHERE apartment_reference = :apartmentId AND latest = true ORDER BY date_of_recording DESC LIMIT 3", nativeQuery = true)
+    List<Map<String, Object>> findActiveHeatingMeterValues(@Param("apartmentId") Long apartmentId);
+
     @Query(value = "SELECT gas_unit_price FROM apartments WHERE id = :currentId", nativeQuery = true)
     Integer findGasUnitPrice(@Param("currentId") Long currentId);
 
@@ -50,6 +56,9 @@ public interface ApartmentRepository extends JpaRepository<Apartment, Long> {
 
     @Query(value = "SELECT water_unit_price FROM apartments WHERE id = :currentId", nativeQuery = true)
     Integer findWaterUnitPrice(@Param("currentId") Long currentId);
+
+    @Query(value = "SELECT heating_unit_price FROM apartments WHERE id = :currentId", nativeQuery = true)
+    Integer findHeatingUnitPrice(@Param("currentId") Long currentId);
 
 
 

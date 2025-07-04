@@ -37,7 +37,7 @@ public class ElectricityMeterValues {
     private Apartment apartmentReference;
 
     @Column(name = "electricity_value", nullable = false)
-    private Integer gasValue;
+    private Integer electricityValue;
 
     @Column(name = "date_of_recording", nullable = false)
     private LocalDateTime dateOfRecording;
@@ -48,6 +48,9 @@ public class ElectricityMeterValues {
 //    @Lob
     @Column(name = "image_file", columnDefinition = "BYTEA", nullable = true)
     private byte[] imageFile;
+
+    @Column(name = "consumption", nullable = true)
+    private Integer consumption;
 
     public Long getId() {
         return id;
@@ -66,11 +69,11 @@ public class ElectricityMeterValues {
     }
 
     public Integer getElectricityValue() {
-        return gasValue;
+        return electricityValue;
     }
 
     public void setElectricityValue(Integer gasValue) {
-        this.gasValue = gasValue;
+        this.electricityValue = gasValue;
     }
 
     public LocalDateTime getDateOfRecording() {
@@ -95,6 +98,14 @@ public class ElectricityMeterValues {
 
     public void setImageFile(byte[] imageFile) {
         this.imageFile = imageFile;
+    }
+
+    public Integer getConsumption() {
+        return consumption;
+    }
+
+    public void setConsumption(Integer consumption) {
+        this.consumption = consumption;
     }
 }
 

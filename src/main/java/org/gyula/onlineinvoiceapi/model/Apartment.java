@@ -61,6 +61,9 @@ public class Apartment {
     @Column(name = "water_unit_price")
     private Integer waterUnitPrice;
 
+    @Column(name = "heating_unit_price")
+    private Integer heatingUnitPrice;
+
     public Long getId() {
         return id;
     }
@@ -171,5 +174,13 @@ public class Apartment {
 
     public void setWaterUnitPrice(Integer waterUnitPrice) {
         this.waterUnitPrice = waterUnitPrice;
+    }
+
+    public Integer getHeatingUnitPrice() {
+        return heatingUnitPrice;
+    }
+
+    public void setHeatingUnitPrice(Integer heatingUnitPrice) {
+        this.heatingUnitPrice = heatingUnitPrice;
     }
 }
