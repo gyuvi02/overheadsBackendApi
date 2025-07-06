@@ -186,7 +186,8 @@ public class AdminService {
             List<Map<String, Object>> gasValues = apartmentRepository.findActiveGasMeterValues(apartmentId);
             List<Map<String, Object>> electricityValues = apartmentRepository.findActiveElectricityMeterValues(apartmentId);
             List<Map<String, Object>> waterValues = apartmentRepository.findActiveWaterMeterValues(apartmentId);
-            log.info("Found {} gas values, {} electricity values, and {} water values", gasValues.size(), electricityValues.size(), waterValues.size());
+            List<Map<String, Object>> heatingValues = apartmentRepository.findActiveHeatingMeterValues(apartmentId);
+            log.info("Found {} gas values, {} electricity values, {} water values and {} heating values", gasValues.size(), electricityValues.size(), waterValues.size(), heatingValues.size());
 
             if (!gasValues.isEmpty()) {
                 latestValues.put("gas", ((Number) gasValues.get(0).get("gas_value")).intValue());
@@ -197,6 +198,9 @@ public class AdminService {
             if (!waterValues.isEmpty()) {
                 log.info(" water value");
                 latestValues.put("water", ((Number) waterValues.get(0).get("water_value")).intValue());
+            }if (!heatingValues.isEmpty()) {
+                log.info(" heating value");
+                latestValues.put("heating", ((Number) heatingValues.get(0).get("heating_value")).intValue());
             }
 
             return latestValues;
@@ -229,7 +233,8 @@ public class AdminService {
             List<Map<String, Object>> gasValues = apartmentRepository.findActiveGasMeterValues(apartmentId);
             List<Map<String, Object>> electricityValues = apartmentRepository.findActiveElectricityMeterValues(apartmentId);
             List<Map<String, Object>> waterValues = apartmentRepository.findActiveWaterMeterValues(apartmentId);
-            log.info("Found {} gas values, {} electricity values, and {} water values", gasValues.size(), electricityValues.size(), waterValues.size());
+            List<Map<String, Object>> heatingValues = apartmentRepository.findActiveHeatingMeterValues(apartmentId);
+            log.info("Found {} gas values, {} electricity values, {} water values and {} heating values", gasValues.size(), electricityValues.size(), waterValues.size(), heatingValues.size());
 
             if (!gasValues.isEmpty()) {
                 Map<String, Object> gasRow = gasValues.get(0);
@@ -256,6 +261,16 @@ public class AdminService {
                 }
                 if (waterRow.get("image_file") != null) {
                     latestValues.put("water_image", waterRow.get("image_file"));
+                }
+            }
+
+            if (!heatingValues.isEmpty()) {
+                Map<String, Object> heatingRow = heatingValues.get(0);
+                if (heatingRow.get("heating_value") != null) {
+                    latestValues.put("heating", ((Number) heatingRow.get("heating_value")).intValue());
+                }
+                if (heatingRow.get("image_file") != null) {
+                    latestValues.put("heating_image", heatingRow.get("image_file"));
                 }
             }
 
@@ -293,13 +308,14 @@ public class AdminService {
         String[] gasRow;
         String[] electricityRow;
         String[] waterRow;
+        String[] heatingRow;
         List<String[]> rowList = new ArrayList<>();
         List<String[]> otherCostsList = new ArrayList<>();
 
         // Language-specific text mappings
         String language = invoiceData.getLanguage();
         boolean isHungarian = "h".equals(language);
-
+        
         // Text translations
         String notOfficialInvoice = isHungarian ? "Nem hivatalos számla!" : "Not an official invoice!";
         String typeHeader = isHungarian ? "Típus" : "Type";
@@ -312,10 +328,15 @@ public class AdminService {
         String gasText = isHungarian ? "Gáz" : "Gas";
         String electricityText = isHungarian ? "Villany" : "Electricity";
         String waterText = isHungarian ? "Víz" : "Water";
+        String heatingText = isHungarian ? "Fűtés" : "Heating";
         String rentText = isHungarian ? "Bérleti díj" : "Rent";
         String cleaningText = isHungarian ? "Takarítás" : "Cleaning";
         String maintenanceFeeText = isHungarian ? "Közös költség" : "Maintenance fee";
         String totalSumText = isHungarian ? "Végösszeg: " : "Total Sum: ";
+        String oldGasMeterConsumption = isHungarian ? "Fogyasztás a korábbi gázóra alapján" : "Gas consumption based on previous gas meter";
+        String oldElectricityMeterConsumption = isHungarian ? "Fogyasztás a korábbi villanyóra alapján" : "Electricity consumption based on previous electricity meter";
+        String oldWaterMeterConsumption = isHungarian ? "Fogyasztás a korábbi vízóra alapján" : "Water consumption based on previous water meter";
+        String oldHeatingMeterConsumption = isHungarian ? "Fogyasztás a korábbi fűtés mérő alapján" : "Consumption based on previous heating meter";
 
         try (PDDocument document = new PDDocument()) {
             PDType0Font boldFont = PDType0Font.load(document, new File(arialBoldTtfFile));
@@ -345,10 +366,11 @@ public class AdminService {
 
             // Space before table
             float tableY = yStart - 40;
-            // Meter values table (Gas, Electricity, Water)
+            // Meter values table (Gas, Electricity, Water, Heating)
             String[] meterHeaders = { typeHeader, previousValueHeader, currentValueHeader, consumptionHeader, sumHeader };
             if (invoiceData.getActualGas() != null && !invoiceData.getActualGas().equals("0")) {
                 int gasConsumption = Integer.parseInt(invoiceData.getActualGas()) - Integer.parseInt(invoiceData.getPreviousGas());
+                if (invoiceData.getGasNewMeterConsumption() != null && !invoiceData.getGasNewMeterConsumption().equals("0")) rowList.add(new String[] {oldGasMeterConsumption, "" , "", invoiceData.getGasNewMeterConsumption()});
                 rowList.add(new String[] {
                         gasText,
                         invoiceData.getPreviousGas(),
@@ -359,6 +381,7 @@ public class AdminService {
             }
             if (invoiceData.getActualElectricity() != null && !invoiceData.getActualElectricity().equals("0")) {
                 int electricityConsumption = Integer.parseInt(invoiceData.getActualElectricity()) - Integer.parseInt(invoiceData.getPreviousElectricity());
+                if (invoiceData.getElectricityNewMeterConsumption() != null && !invoiceData.getElectricityNewMeterConsumption().equals("0")) rowList.add(new String[] {oldElectricityMeterConsumption, "" , "", invoiceData.getElectricityNewMeterConsumption()});
                 rowList.add(new String[] {
                         electricityText,
                         invoiceData.getPreviousElectricity(),
@@ -369,6 +392,7 @@ public class AdminService {
             }
             if (invoiceData.getActualWater() != null && !invoiceData.getActualWater().equals("0")) {
                 int waterConsumption = Integer.parseInt(invoiceData.getActualWater()) - Integer.parseInt(invoiceData.getPreviousWater());
+                if (invoiceData.getWaterNewMeterConsumption() != null && !invoiceData.getWaterNewMeterConsumption().equals("0")) rowList.add(new String[] {oldWaterMeterConsumption, "" , "", invoiceData.getWaterNewMeterConsumption()});
                 rowList.add(new String[] {
                         waterText,
                         invoiceData.getPreviousWater(),
@@ -377,6 +401,18 @@ public class AdminService {
                         formatNumber(invoiceData.getWaterCost()) + " HUF"
                 });
             }
+            if (invoiceData.getActualHeating() != null && !invoiceData.getActualHeating().equals("0")) {
+                int heatingConsumption = Integer.parseInt(invoiceData.getActualHeating()) - Integer.parseInt(invoiceData.getPreviousHeating());
+                if (invoiceData.getHeatingNewMeterConsumption() != null && !invoiceData.getHeatingNewMeterConsumption().equals("0")) rowList.add(new String[] {oldHeatingMeterConsumption, "" , "", invoiceData.getHeatingNewMeterConsumption()});
+                rowList.add(new String[] {
+                        heatingText,
+                        invoiceData.getPreviousHeating(),
+                        invoiceData.getActualHeating(),
+                        formatNumber(String.valueOf(heatingConsumption)),
+                        formatNumber(invoiceData.getHeatingCost()) + " HUF"
+                });
+            }
+            rowList.forEach(row -> log.info("Row: {}", row));
             String[][] meterRows = rowList.toArray(new String[rowList.size()][]);
             // Draw meter table
             tableY = drawTable(document, page, contentStream, margin, tableY, meterHeaders, meterRows);
@@ -478,6 +514,9 @@ public class AdminService {
         int unitPrice = 0;
         int consumption = 0;
 
+        log.info("sortedMap content for {} meter: {}", meterType, sortedMap);
+
+
         if (sortedMap.size() < 2){
             sortedMap.put("", "0"); //There must be 3 values in the Map as the frontend uses all 3 of them
             sortedMap.put(meterType, "0");
@@ -490,6 +529,7 @@ public class AdminService {
             case "gas": unitPrice = apartmentRepository.findGasUnitPrice(apartmentId); break;
             case "electricity": unitPrice = apartmentRepository.findElectricityUnitPrice(apartmentId); break;
             case "water": unitPrice = apartmentRepository.findWaterUnitPrice(apartmentId); break;
+            case "heating": unitPrice = apartmentRepository.findHeatingUnitPrice(apartmentId); break;
         }
         log.info("unitPrice: {}", unitPrice);
         Map<String, String> result = new LinkedHashMap<>();
@@ -512,25 +552,54 @@ public class AdminService {
         List<Map<String, Object>> gasValues = apartmentRepository.findActiveGasMeterValues(apartmentId);
         List<Map<String, Object>> electricityValues = apartmentRepository.findActiveElectricityMeterValues(apartmentId);
         List<Map<String, Object>> waterValues = apartmentRepository.findActiveWaterMeterValues(apartmentId);
+        List<Map<String, Object>> heatingValues = apartmentRepository.findActiveHeatingMeterValues(apartmentId);
 
         Map<String, Map<String, String>> meterValues = new HashMap<>();
         try {
             if (!gasValues.isEmpty()) {
                 Map<String, String> last2Gas = getLast2Entries(userService.sendLastYearMeterValue("gas", apartmentId), "gas", apartmentId);
+                last2Gas.put("gasNewMeterConsumption", checkIfNewMeterValue("gas", apartmentId));
                 meterValues.put("gas", last2Gas);
             }
             if (!electricityValues.isEmpty()) {
                 Map<String, String> last2Electricity = getLast2Entries(userService.sendLastYearMeterValue("electricity", apartmentId), "electricity", apartmentId);
+                last2Electricity.put("electricityNewMeterConsumption", checkIfNewMeterValue("electricity", apartmentId));
                 meterValues.put("electricity", last2Electricity);
             }
             if (!waterValues.isEmpty()) {
                 Map<String, String> last2Water = getLast2Entries(userService.sendLastYearMeterValue("water", apartmentId), "water", apartmentId);
+                last2Water.put("waterNewMeterConsumption", checkIfNewMeterValue("water", apartmentId));
                 meterValues.put("water", last2Water);
             }
+            if (!heatingValues.isEmpty()) {
+                Map<String, String> last2Heating = getLast2Entries(userService.sendLastYearMeterValue("heating", apartmentId), "heating", apartmentId);
+                last2Heating.put("heatingNewMeterConsumption", checkIfNewMeterValue("heating", apartmentId));
+                meterValues.put("heating", last2Heating);
+            }
+            log.info("Returning meterValues: {}", meterValues);
             return meterValues;
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private String checkIfNewMeterValue(String meterType, Long apartmentId) {
+        List<Map<String, Object>> last12Values = null;
+        try {
+            switch (meterType) {
+                case "gas": last12Values = apartmentRepository.findLatestGasMeterValues(apartmentId); break;
+                case "electricity": last12Values = apartmentRepository.findLatestElectricityMeterValues(apartmentId); break;
+                case "water": last12Values = apartmentRepository.findLatestWaterMeterValues(apartmentId); break;
+                case "heating": last12Values = apartmentRepository.findLatestHeatingMeterValues(apartmentId); break;
+            }
+            log.info("last12Values: {}", last12Values);
+            if (!last12Values.isEmpty() && last12Values.size() > 1 && last12Values.get(1).get("consumption") != null) {
+                return last12Values.get(1).get("consumption").toString();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return "0";
     }
 
 }

@@ -276,7 +276,8 @@ public class AdminController {
             @RequestHeader("API-KEY") String apiKey,
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody Apartment editedApartment,
-            @RequestParam String meterType) {
+            @RequestParam String meterType,
+            @RequestParam String lastMeterValue) {
 
         log.info("/editApartment endpoint called");
 
@@ -300,10 +301,13 @@ public class AdminController {
                 return new ResponseEntity<>(Map.of("message", "Apartment updated successfully with ID: " + apartmentId), HttpStatus.OK);
             }else {     // Update because one of the meters was changed
                 log.info("A new {} meter is to be registered for apartment with ID: {}", meterType, apartmentId);
-                //First, I nned to save the final consumption value for the old meter
-                
+                //First, I need to save the final consumption value for the old meter
+                Map<String, Map<String, String>> results = adminService.getLast2MeterValues(Long.parseLong(String.valueOf(apartmentId)));
+                String oldMeterValue = results.get(meterType).entrySet().iterator().next().getValue(); //get the first value from the Map, it is the latest
                 Map<String,String> meterMap = Map.of("meterValue", "0", "apartmentId", apartmentId.toString());
-                userService.addMeterValue(meterType, meterMap, null);
+                int consumptionCalculated = oldMeterValue.equals(lastMeterValue) ? 0 : Integer.parseInt(lastMeterValue) - Integer.parseInt(oldMeterValue);
+                log.info("A new {} meter is to be registered for apartment with ID: {}. Old meter value: {}, new meter value: {}, calculated consumption: {}", meterType, apartmentId, oldMeterValue, lastMeterValue, consumptionCalculated);
+                userService.addMeterValue(meterType, meterMap, null, consumptionCalculated);
                 apartmentRepository.save(editedApartment);
                 return new ResponseEntity<>(Map.of("message", "Apartment updated successfully with ID: " + apartmentId), HttpStatus.OK);
 
@@ -424,7 +428,7 @@ public class AdminController {
             String meterType = body.get("meterType");
 
             Map<String,Object>lastMeterValuesWithImages = userService.sendLastYearMeterValueWithImage(meterType, Long.valueOf(apartmentId));
-
+            log.info("last meter values with meter type: " + lastMeterValuesWithImages.toString());
             Map<String, String> lastMeterValues = userService.sendLastYearMeterValue(meterType, Long.valueOf(apartmentId));
             log.info("Last meter values retrieved successfully: " + lastMeterValues.toString());
             return new ResponseEntity<>(lastMeterValuesWithImages, HttpStatus.OK);
@@ -719,7 +723,8 @@ public class AdminController {
     public ResponseEntity<?> newMeterInstalled(
             @RequestHeader("API-KEY") String apiKey,
             @RequestHeader("Authorization") String authorizationHeader,
-            @RequestBody Apartment modifiedApartment ){
+            @RequestBody Apartment modifiedApartment,
+            @RequestBody int lastMeterValue){
         log.info("/newMeterInstalled endpoint called");
 
         try {

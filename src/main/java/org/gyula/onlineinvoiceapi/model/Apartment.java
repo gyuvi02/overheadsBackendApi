@@ -40,6 +40,9 @@ public class Apartment {
     @Column(name = "water_meterid")
     private String waterMeterID;
 
+    @Column(name = "heating_meterid")
+    private String heatingMeterID;
+
     @Column(name = "deadline")
     private Short deadline;
 
@@ -182,5 +185,13 @@ public class Apartment {
 
     public void setHeatingUnitPrice(Integer heatingUnitPrice) {
         this.heatingUnitPrice = heatingUnitPrice;
+    }
+
+    public String getHeatingMeterID() {
+        return heatingMeterID;
+    }
+
+    public void setHeatingMeterID(String heatingMeterID) {
+        this.heatingMeterID = heatingMeterID;
     }
 }

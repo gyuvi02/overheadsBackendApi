@@ -9,16 +9,25 @@ public class InvoiceItemDto {
     private String actualGas;
     private String actualGasDate;
     private String gasCost;
+    private String gasNewMeterConsumption;
     private String previousElectricity;
     private String previousElectricityDate;
     private String actualElectricity;
     private String actualElectricityDate;
     private String electricityCost;
+    private String electricityNewMeterConsumption;
     private String previousWater;
     private String previousWaterDate;
     private String actualWater;
     private String actualWaterDate;
     private String waterCost;
+    private String waterNewMeterConsumption;
+    private String previousHeating;
+    private String previousHeatingDate;
+    private String actualHeating;
+    private String actualHeatingDate;
+    private String heatingCost;
+    private String heatingNewMeterConsumption;
     private String cleaning;
     private String maintenanceFee;
     private String otherText;
@@ -26,7 +35,7 @@ public class InvoiceItemDto {
     private String totalSum;
     private String language;
 
-    public InvoiceItemDto(String rent, String previousGas, String actualGas, String gasCost, String previousElectricity, String actualElectricity, String electricityCost, String previousWater, String actualWater, String waterCost, String cleaning, String maintenanceFee, String totalSum) {
+    public InvoiceItemDto(String rent, String previousGas, String actualGas, String gasCost, String previousElectricity, String actualElectricity, String electricityCost, String previousWater, String actualWater, String waterCost, String actualHeating, String heatingCost, String previousHeating, String cleaning, String maintenanceFee, String totalSum) {
         this.rent = rent;
         this.previousGas = previousGas;
         this.actualGas = actualGas;
@@ -37,6 +46,9 @@ public class InvoiceItemDto {
         this.previousWater = previousWater;
         this.actualWater = actualWater;
         this.waterCost = waterCost;
+        this.actualHeating = actualHeating;
+        this.heatingCost = heatingCost;
+        this.previousHeating = previousHeating;
         this.cleaning = cleaning;
         this.maintenanceFee = maintenanceFee;
         this.totalSum = totalSum;
@@ -232,5 +244,85 @@ public class InvoiceItemDto {
 
     public void setLanguage(String language) {
         this.language = language;
+    }
+
+    public String getActualHeating() {
+        return actualHeating;
+    }
+
+    public void setActualHeating(String actualHeating) {
+        this.actualHeating = actualHeating;
+    }
+
+    public String getActualHeatingDate() {
+        return actualHeatingDate;
+    }
+
+    public void setActualHeatingDate(String actualHeatingDate) {
+        this.actualHeatingDate = actualHeatingDate;
+    }
+
+    public String getHeatingCost() {
+        return heatingCost;
+    }
+
+    public void setHeatingCost(String heatingCost) {
+        this.heatingCost = heatingCost;
+    }
+
+    public String getPreviousHeating() {
+        return previousHeating;
+    }
+
+    public void setPreviousHeating(String previousHeating) {
+        this.previousHeating = previousHeating;
+    }
+
+    public String getMaintenanceFee() {
+        return maintenanceFee;
+    }
+
+    public void setMaintenanceFee(String maintenanceFee) {
+        this.maintenanceFee = maintenanceFee;
+    }
+
+    public String getGasNewMeterConsumption() {
+        return gasNewMeterConsumption;
+    }
+
+    public void setGasNewMeterConsumption(String gasNewMeterConsumption) {
+        this.gasNewMeterConsumption = gasNewMeterConsumption;
+    }
+
+    public String getElectricityNewMeterConsumption() {
+        return electricityNewMeterConsumption;
+    }
+
+    public void setElectricityNewMeterConsumption(String electricityNewMeterConsumption) {
+        this.electricityNewMeterConsumption = electricityNewMeterConsumption;
+    }
+
+    public String getWaterNewMeterConsumption() {
+        return waterNewMeterConsumption;
+    }
+
+    public void setWaterNewMeterConsumption(String waterNewMeterConsumption) {
+        this.waterNewMeterConsumption = waterNewMeterConsumption;
+    }
+
+    public String getPreviousHeatingDate() {
+        return previousHeatingDate;
+    }
+
+    public void setPreviousHeatingDate(String previousHeatingDate) {
+        this.previousHeatingDate = previousHeatingDate;
+    }
+
+    public String getHeatingNewMeterConsumption() {
+        return heatingNewMeterConsumption;
+    }
+
+    public void setHeatingNewMeterConsumption(String heatingNewMeterConsumption) {
+        this.heatingNewMeterConsumption = heatingNewMeterConsumption;
     }
 }
