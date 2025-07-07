@@ -52,6 +52,9 @@ public class ElectricityMeterValues {
     @Column(name = "consumption", nullable = true)
     private Integer consumption;
 
+    @Column(name = "invoice", columnDefinition = "BYTEA", nullable = true)
+    private byte[] invoice;
+
     public Long getId() {
         return id;
     }
@@ -106,6 +109,14 @@ public class ElectricityMeterValues {
 
     public void setConsumption(Integer consumption) {
         this.consumption = consumption;
+    }
+
+    public byte[] getInvoice() {
+        return invoice;
+    }
+
+    public void setInvoice(byte[] invoice) {
+        this.invoice = invoice;
     }
 }
 

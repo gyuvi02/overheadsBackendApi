@@ -2,19 +2,13 @@ package org.gyula.onlineinvoiceapi.controller;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.gyula.onlineinvoiceapi.model.Apartment;
-import org.gyula.onlineinvoiceapi.model.ElectricityMeterValues;
-import org.gyula.onlineinvoiceapi.model.GasMeterValues;
-import org.gyula.onlineinvoiceapi.model.LoginRequest;
-import org.gyula.onlineinvoiceapi.model.RegisterRequest;
-import org.gyula.onlineinvoiceapi.model.RegistrationToken;
-import org.gyula.onlineinvoiceapi.model.User;
-import org.gyula.onlineinvoiceapi.model.WaterMeterValues;
+import org.gyula.onlineinvoiceapi.model.*;
 import org.gyula.onlineinvoiceapi.repositories.ElectricityMeterRepository;
 import org.gyula.onlineinvoiceapi.repositories.GasMeterRepository;
 import org.gyula.onlineinvoiceapi.repositories.RegistrationTokenRepository;
 import org.gyula.onlineinvoiceapi.repositories.UserRepository;
 import org.gyula.onlineinvoiceapi.repositories.WaterMeterRepository;
+import org.gyula.onlineinvoiceapi.repositories.HeatingMeterRepository;
 import org.gyula.onlineinvoiceapi.services.AuthenticationService;
 import org.gyula.onlineinvoiceapi.services.CustomUserDetailsService;
 import org.gyula.onlineinvoiceapi.services.UserService;
@@ -72,11 +66,13 @@ public class MainController {
 
     private final ElectricityMeterRepository electricityMeterRepository;
 
+    private final HeatingMeterRepository heatingMeterRepository;
 
-    public MainController(UserService userService, RegistrationTokenRepository tokenRepository, 
-                         CustomUserDetailsService customUserDetailsService, BCryptPasswordEncoder passwordEncoder, 
-                         UserRepository userRepository, GasMeterRepository gasMeterRepository,
-                         WaterMeterRepository waterMeterRepository, ElectricityMeterRepository electricityMeterRepository) {
+
+    public MainController(UserService userService, RegistrationTokenRepository tokenRepository,
+                          CustomUserDetailsService customUserDetailsService, BCryptPasswordEncoder passwordEncoder,
+                          UserRepository userRepository, GasMeterRepository gasMeterRepository,
+                          WaterMeterRepository waterMeterRepository, ElectricityMeterRepository electricityMeterRepository, HeatingMeterRepository heatingMeterRepository) {
         this.userService = userService;
         this.tokenRepository = tokenRepository;
         this.customUserDetailsService = customUserDetailsService;
@@ -85,6 +81,7 @@ public class MainController {
         this.gasMeterRepository = gasMeterRepository;
         this.waterMeterRepository = waterMeterRepository;
         this.electricityMeterRepository = electricityMeterRepository;
+        this.heatingMeterRepository = heatingMeterRepository;
     }
 
     /**
@@ -169,19 +166,18 @@ public class MainController {
                         log.info("latestGas: {}", latestGas.toString());
                         Optional<WaterMeterValues> latestWater = waterMeterRepository.findByApartmentReferenceAndLatestTrue(apartment);
                         Optional<ElectricityMeterValues> latestElectricity = electricityMeterRepository.findByApartmentReferenceAndLatestTrue(apartment);
+                        Optional<HeatingMeterValues> latestHeating = heatingMeterRepository.findByApartmentReferenceAndLatestTrue(apartment);
 
                         // Add meter values to response if they exist
                         if (latestGas.isPresent()) {
                             response.put("actualGas", latestGas.get().getGasValue().toString());
                         }
 
-                        if (latestWater.isPresent()) {
-                            response.put("actualWater", latestWater.get().getWaterValue().toString());
-                        }
+                        latestWater.ifPresent(waterMeterValues -> response.put("actualWater", waterMeterValues.getWaterValue().toString()));
 
-                        if (latestElectricity.isPresent()) {
-                            response.put("actualElectricity", latestElectricity.get().getElectricityValue().toString());
-                        }
+                        latestElectricity.ifPresent(electricityMeterValues -> response.put("actualElectricity", electricityMeterValues.getElectricityValue().toString()));
+
+                        latestHeating.ifPresent(heatingMeterValues -> response.put("actualHeating", heatingMeterValues.getHeatingValue().toString()));
 
                         return ResponseEntity.ok(response);
                     } else {

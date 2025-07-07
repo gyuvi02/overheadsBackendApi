@@ -51,6 +51,9 @@ public class GasMeterValues {
     @Column(name = "consumption", nullable = true)
     private Integer consumption;
 
+    @Column(name = "invoice", columnDefinition = "BYTEA", nullable = true)
+    private byte[] invoice;
+
 
     // Getters and Setters
     public Long getId() {
@@ -107,5 +110,13 @@ public class GasMeterValues {
 
     public void setConsumption(Integer consumption) {
         this.consumption = consumption;
+    }
+
+    public byte[] getInvoice() {
+        return invoice;
+    }
+
+    public void setInvoice(byte[] invoice) {
+        this.invoice = invoice;
     }
 }

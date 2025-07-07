@@ -42,9 +42,15 @@ public class WaterMeterValues {
     @Column(name = "latest", nullable = false)
     private Boolean latest;
 
+    @Column(name = "consumption", nullable = true)
+    private Integer consumption;
+
 //    @Lob
     @Column(name = "image_file", columnDefinition = "BYTEA", nullable = true)
     private byte[] imageFile;
+
+    @Column(name = "invoice", columnDefinition = "BYTEA", nullable = true)
+    private byte[] invoice;
 
     public Long getId() {
         return id;
@@ -66,8 +72,8 @@ public class WaterMeterValues {
         return waterValue;
     }
 
-    public void setWaterValue(Integer gasValue) {
-        this.waterValue = gasValue;
+    public void setWaterValue(Integer waterValue) {
+        this.waterValue = waterValue;
     }
 
     public LocalDateTime getDateOfRecording() {
@@ -92,6 +98,22 @@ public class WaterMeterValues {
 
     public void setImageFile(byte[] imageFile) {
         this.imageFile = imageFile;
+    }
+
+    public Integer getConsumption() {
+        return consumption;
+    }
+
+    public void setConsumption(Integer consumption) {
+        this.consumption = consumption;
+    }
+
+    public byte[] getInvoice() {
+        return invoice;
+    }
+
+    public void setInvoice(byte[] invoice) {
+        this.invoice = invoice;
     }
 }
 

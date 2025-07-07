@@ -18,7 +18,7 @@ public class HeatingMeterValues {
     private Apartment apartmentReference;
 
     @Column(name = "heating_value", nullable = false)
-    private Integer waterValue;
+    private Integer heatingValue;
 
     @Column(name = "date_of_recording", nullable = false)
     private LocalDateTime dateOfRecording;
@@ -32,6 +32,9 @@ public class HeatingMeterValues {
     //    @Lob
     @Column(name = "image_file", columnDefinition = "BYTEA", nullable = true)
     private byte[] imageFile;
+
+    @Column(name = "invoice", columnDefinition = "BYTEA", nullable = true)
+    private byte[] invoice;
 
     public Long getId() {
         return id;
@@ -50,11 +53,11 @@ public class HeatingMeterValues {
     }
 
     public Integer getHeatingValue() {
-        return waterValue;
+        return heatingValue;
     }
 
-    public void setHeatingValue(Integer gasValue) {
-        this.waterValue = gasValue;
+    public void setHeatingValue(Integer heatingValue) {
+        this.heatingValue = heatingValue;
     }
 
     public LocalDateTime getDateOfRecording() {
@@ -87,6 +90,14 @@ public class HeatingMeterValues {
 
     public void setConsumption(Integer consumption) {
         this.consumption = consumption;
+    }
+
+    public byte[] getInvoice() {
+        return invoice;
+    }
+
+    public void setInvoice(byte[] invoice) {
+        this.invoice = invoice;
     }
 }
 
