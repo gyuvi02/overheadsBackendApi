@@ -38,6 +38,9 @@ public class UserService {
     @Autowired
     private WaterMeterRepository waterMeterValueRepository;
 
+    @Autowired
+    private HeatingMeterRepository heatingMeterValueRepository;
+
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
@@ -118,7 +121,7 @@ public class UserService {
      * @throws IllegalArgumentException if the `values` map is null or empty, or if the provided meterType is invalid
      * @throws Exception if an error occurs during the operation, such as file processing or database update issues
      */
-    public void addMeterValue(String meterType, Map<String, String> values, MultipartFile file) throws Exception {
+    public void addMeterValue(String meterType, Map<String, String> values, MultipartFile file, int consumption) throws Exception {
         if (values == null || values.isEmpty()) {
             throw new IllegalArgumentException("Values map cannot be null or empty");
         }
@@ -148,6 +151,7 @@ public class UserService {
                     gasMeterValue.setApartmentReference(newApartment);
                     gasMeterValue.setDateOfRecording(LocalDateTime.now());
                     gasMeterValue.setGasValue(Integer.parseInt(valueToAdd));
+                    if (consumption != 0) gasMeterValue.setConsumption(consumption);
                     if(fileContent != null) gasMeterValue.setImageFile(fileContent);
                     gasMeterValueRepository.save(gasMeterValue);
                     //Modify the previous latest value only if the save wass successful
@@ -162,6 +166,7 @@ public class UserService {
                     electricityMeterValue.setDateOfRecording(LocalDateTime.now());
                     electricityMeterValue.setElectricityValue(Integer.parseInt(valueToAdd));
                     electricityMeterValue.setImageFile(fileContent);
+                    if (consumption != 0) electricityMeterValue.setConsumption(consumption);
                     electricityMeterValueRepository.save(electricityMeterValue);
                     //Modify the previous latest value only if the save wass successful
                     updateQuery = "UPDATE " + tableName + " SET latest = false WHERE apartment_reference = " + apartmentReference + " AND id NOT IN (SELECT id FROM " + tableName + " WHERE apartment_reference = " + apartmentReference + " ORDER BY date_of_recording DESC LIMIT 1)";
@@ -175,8 +180,22 @@ public class UserService {
                     waterMeterValue.setDateOfRecording(LocalDateTime.now());
                     waterMeterValue.setWaterValue(Integer.parseInt(valueToAdd));
                     waterMeterValue.setImageFile(fileContent);
+                    if (consumption != 0) waterMeterValue.setConsumption(consumption);
                     waterMeterValueRepository.save(waterMeterValue);
-                    //Modify the previous latest value only if the save wass successful
+                    //Modify the previous latest value only if the save was successful
+                    updateQuery = "UPDATE " + tableName + " SET latest = false WHERE apartment_reference = " + apartmentReference + " AND id NOT IN (SELECT id FROM " + tableName + " WHERE apartment_reference = " + apartmentReference + " ORDER BY date_of_recording DESC LIMIT 1)";
+                    jdbcTemplate.update(updateQuery);
+                    break;
+                case "heating":
+                    HeatingMeterValues heatingMeterValue = new HeatingMeterValues();
+                    tableName = "heating_meter_values";
+                    heatingMeterValue.setLatest(true);
+                    heatingMeterValue.setApartmentReference(newApartment);
+                    heatingMeterValue.setDateOfRecording(LocalDateTime.now());
+                    heatingMeterValue.setHeatingValue(Integer.parseInt(valueToAdd));
+                    heatingMeterValue.setImageFile(fileContent);
+                    if (consumption != 0) heatingMeterValue.setConsumption(consumption);
+                    heatingMeterValueRepository.save(heatingMeterValue);
                     updateQuery = "UPDATE " + tableName + " SET latest = false WHERE apartment_reference = " + apartmentReference + " AND id NOT IN (SELECT id FROM " + tableName + " WHERE apartment_reference = " + apartmentReference + " ORDER BY date_of_recording DESC LIMIT 1)";
                     jdbcTemplate.update(updateQuery);
                     break;
@@ -220,6 +239,10 @@ public class UserService {
                     foundMeterValues = apartmentRepository.findActiveWaterMeterValues(apartmentId);
                     yield foundMeterValues.get(0).get("water_value").toString();
                 }
+                case "heating" -> {
+                    foundMeterValues = apartmentRepository.findActiveHeatingMeterValues(apartmentId);
+                    yield foundMeterValues.get(0).get("heating_value").toString();
+                }
                 default -> throw new Exception("Invalid meterType: " + meterType);
             };
         }catch (IndexOutOfBoundsException e){
@@ -238,11 +261,13 @@ public class UserService {
      * @throws Exception if an invalid meter type is provided or if any issue occurs while retrieving the data.
      */
     public Map<String, String> sendLastYearMeterValue(String meterType, Long apartmentId) throws Exception {
+        log.info("In sendLastYearMeterValue");
         List<Map<String, Object>> result;
         switch (meterType) {
             case "gas" -> {result = apartmentRepository.findLatestGasMeterValues(apartmentId); break;}
             case "electricity" -> {result = apartmentRepository.findLatestElectricityMeterValues(apartmentId); break;}
             case "water" -> {result = apartmentRepository.findLatestWaterMeterValues(apartmentId); break;}
+            case "heating" -> {result = apartmentRepository.findLatestHeatingMeterValues(apartmentId); break;}
             default -> throw new Exception("Invalid meterType: " + meterType);
         }
 
@@ -252,6 +277,8 @@ public class UserService {
                 .forEach(map -> {
                     resultMap.put(map.get("date_of_recording").toString(), map.get(meterType + "_value").toString());
                 });
+
+        result.forEach((r) -> System.out.println("result outcome: " + r.values()));
 
         return resultMap;
     }
@@ -267,11 +294,13 @@ public class UserService {
      * @throws Exception If an invalid meterType is provided or if an issue occurs during data retrieval.
      */
     public Map<String, Object> sendLastYearMeterValueWithImage(String meterType, Long apartmentId) throws Exception {
+        log.info("In sendLastYearMeterValueWithImage");
         List<Map<String, Object>> result = null;
         switch (meterType) {
             case "gas" -> {result = apartmentRepository.findLatestGasMeterValues(apartmentId);}
             case "electricity" -> {result = apartmentRepository.findLatestElectricityMeterValues(apartmentId);}
             case "water" -> {result = apartmentRepository.findLatestWaterMeterValues(apartmentId);}
+            case "heating" -> {result = apartmentRepository.findLatestHeatingMeterValues(apartmentId);}
             default -> throw new Exception("Invalid meterType: " + meterType);
         }
 

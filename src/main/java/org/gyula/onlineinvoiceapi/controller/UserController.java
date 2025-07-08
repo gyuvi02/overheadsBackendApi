@@ -143,7 +143,7 @@ public class UserController {
             String rawJson = values.get("values");
             log.info("loadUserByUsername: {}", rawJson);
             Map<String, String> parsedValues = objectMapper.readValue(rawJson, Map.class);
-            userService.addMeterValue(meterType, parsedValues, file);
+            userService.addMeterValue(meterType, parsedValues, file, 0);
             log.info("Meter value submitted successfully");
 
         }catch (Exception e){
