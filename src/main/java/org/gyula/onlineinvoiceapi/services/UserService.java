@@ -6,6 +6,7 @@ import org.gyula.onlineinvoiceapi.model.*;
 import org.gyula.onlineinvoiceapi.repositories.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.ApplicationArguments;
+import org.springframework.context.annotation.Scope;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -23,20 +24,42 @@ public class UserService {
     private static final Logger log = LogManager.getLogger(UserService.class);
 
 
-    @Autowired
+
     private ApartmentRepository apartmentRepository;
 
     @Autowired
+    public void setApartmentRepository(ApartmentRepository apartmentRepository) {
+        this.apartmentRepository = apartmentRepository;
+    }
+
     private JdbcTemplate jdbcTemplate;
 
     @Autowired
+    public void setJdbcTemplate(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
     private GasMeterRepository gasMeterValueRepository;
 
     @Autowired
+    public void setGasMeterValueRepository(GasMeterRepository gasMeterValueRepository) {
+        this.gasMeterValueRepository = gasMeterValueRepository;
+    }
+
     private ElectricityMeterRepository electricityMeterValueRepository;
 
     @Autowired
+    public void setElectricityMeterValueRepository(ElectricityMeterRepository electricityMeterValueRepository) {
+        this.electricityMeterValueRepository = electricityMeterValueRepository;
+    }
+
     private WaterMeterRepository waterMeterValueRepository;
+
+    @Autowired
+    public void setWaterMeterValueRepository(WaterMeterRepository waterMeterValueRepository) {
+        this.waterMeterValueRepository = waterMeterValueRepository;
+    }
+
 
     @Autowired
     private HeatingMeterRepository heatingMeterValueRepository;
@@ -131,7 +154,6 @@ public class UserService {
         }else{
             fileContent = null;
         }
-
 
         // Extracting necessary values from the map
         long apartmentReference = Long.parseLong(values.get("apartmentId"));

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.gyula.onlineinvoiceapi.repositories.ApartmentRepository;
+import org.gyula.onlineinvoiceapi.services.AdminService;
 import org.gyula.onlineinvoiceapi.services.AuthenticationService;
 import org.gyula.onlineinvoiceapi.services.CustomUserDetailsService;
 import org.gyula.onlineinvoiceapi.services.UserService;
@@ -60,6 +61,8 @@ public class UserController {
 
     @Autowired
     private ApartmentRepository apartmentRepository;
+    @Autowired
+    private AdminService adminService;
 
     /**
      * Endpoint to send the old meter value for a specific apartment and meter type.
@@ -145,6 +148,7 @@ public class UserController {
             Map<String, String> parsedValues = objectMapper.readValue(rawJson, Map.class);
             userService.addMeterValue(meterType, parsedValues, file, 0);
             log.info("Meter value submitted successfully");
+            adminService.sendSubmitReport(meterType, parsedValues);
 
         }catch (Exception e){
             log.error("An error occurred during submitting new values: {}", e.getMessage());
