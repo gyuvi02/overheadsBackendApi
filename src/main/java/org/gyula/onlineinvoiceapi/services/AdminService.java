@@ -128,6 +128,16 @@ public class AdminService {
         return link;
     }
 
+    /**
+     * Sends an email containing a PDF attachment with a summary of monthly costs to the specified recipient.
+     *
+     * @param userEmail the email address of the user to whom the email will be sent
+     * @param apartmentAddress the address of the apartment, used in the email subject and attached file name
+     * @param language the language code (e.g., "h" for Hungarian) to determine the email content language
+     * @param pdfFile the Base64 encoded string representing the PDF file to be attached to the email
+     * @return a string message confirming the email has been sent to the specified userEmail
+     * @throws Exception if an error occurs during email creation or sending
+     */
     public String sendEmailPdf(String userEmail, String apartmentAddress, String language, String pdfFile) throws Exception{
 
         log.info("In sendEmailPdf: {}", userEmail);
@@ -162,7 +172,6 @@ public class AdminService {
         }
         return ("Email sent to " + userEmail);
     }
-
 
 
     /**
@@ -282,6 +291,14 @@ public class AdminService {
         }
     }
 
+    /**
+     * Sends a reminder email to the user associated with the specified apartment,
+     * prompting them to submit their meter readings. The email's content and language
+     * are determined based on the apartment's language setting.
+     *
+     * @param apartment the apartment object containing details such as the associated language
+     *                  and address, which are used to personalize the email.
+     */
     public void sendReminderEmail(Apartment apartment) {
         User user = userRepository.findByApartmentId(apartment.getId());
 
@@ -304,6 +321,57 @@ public class AdminService {
         }
     }
 
+    /**
+     * Sends a submission report for a meter reading via email. The method retrieves the apartment
+     * details based on the provided apartment ID, formats the email subject and text based on
+     * the apartment's language preference, and sends the email.
+     *
+     * @param meterType the type of the meter for which the value is being submitted
+     * @param values a map containing the submission data, specifically:
+     *               - "apartmentId": the identifier of the apartment (as a String) for which the submission is made
+     *               - "meterValue": the submitted value for the specified meter as a String
+     */
+    public void sendSubmitReport(String meterType, Map<String, String> values) {
+
+        long apartmentReference = Long.parseLong(values.get("apartmentId"));
+        Apartment newApartment = apartmentRepository.findById(apartmentReference)
+                .orElseThrow(() -> new IllegalArgumentException("Apartment not found for reference: " + values.get("apartmentId")));
+        String valueToAdd = values.get("meterValue");
+
+        boolean isHungarian = "h".equals(newApartment.getLanguage());
+        String subjectText = isHungarian ? "Mérő állás bediktálva" : "Meter value submitted";
+        String emailText = isHungarian ? "Új mérőállást diktáltak be a következő ingatlanhoz: " + newApartment.getCity() + ", " + newApartment.getStreet() + "\nAz új mérőállás: " + valueToAdd + " a következő mérőóránál: " + meterType
+                : "A new meter reading was submitted for the following property: " + newApartment.getCity() + ", " + newApartment.getStreet() +  "\nThe new meter value: " + valueToAdd + " for the meter: " + meterType;
+
+        try {
+            SimpleMailMessage message = new SimpleMailMessage();
+            message.setTo("omegahouses.mail@gmail.com");
+            message.setSubject(subjectText);
+            message.setText(emailText);
+            message.setFrom(mailSendAddress);
+            mailSender.send(message);
+            log.info("Sending email from: {}", mailSendAddress + " to omegahouses.mail@gmail.com as a reminder");
+        } catch (MailException e) {
+            log.error("Error sending reminding email: {}", e.getMessage());
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * Generates a PDF "invoice" based on the provided invoice data.
+     * This method creates and formats the invoice content, including
+     * utility consumption tables and additional cost items, then returns
+     * the file path of the generated PDF file.
+     *
+     * @param invoiceData an {@code InvoiceItemDto} object containing
+     *                    essential information such as utility readings,
+     *                    costs, and additional charges required to create
+     *                    the invoice.
+     * @return a {@code String} representing the file path of the created
+     *         PDF invoice.
+     * @throws RuntimeException if an error occurs during the PDF creation
+     *                          process, such as file access or data processing issues.
+     */
     public String createInvoicePdf(InvoiceItemDto invoiceData) throws RuntimeException{
         String[] gasRow;
         String[] electricityRow;
@@ -457,9 +525,19 @@ public class AdminService {
         }
     }
 
-
-
-    // Supporting method for drawing a simple table
+    /**
+     * Draws a table on a given PDF page using the specified content and formatting.
+     *
+     * @param doc the PDF document to which the table belongs
+     * @param page the PDF page on which the table will be drawn
+     * @param cs the content stream used to draw the table
+     * @param x the x-coordinate of the table's starting position on the page
+     * @param y the y-coordinate of the table's starting position on the page
+     * @param headers an array of strings representing the table headers
+     * @param content a 2D array of strings representing the table content, where each sub-array is a row
+     * @return the updated y-coordinate after the table is drawn to the specified content stream
+     * @throws IOException if there is an error during the drawing process
+     */
     private float drawTable(PDDocument doc, PDPage page, PDPageContentStream cs, float x, float y,
                             String[] headers, String[][] content) throws IOException {
 
@@ -494,6 +572,14 @@ public class AdminService {
         return y;
     }
 
+    /**
+     * Formats a numeric string by adding space as a thousand separator.
+     * If the input string is null, empty, or cannot be parsed as a number, it returns the original string.
+     *
+     * @param numberStr the string representing the numeric value to be formatted
+     * @return the formatted numeric string with spaces as thousand separators,
+     *         or the original string if invalid or unparsable
+     */
     private String formatNumber(String numberStr) {
         if (numberStr == null || numberStr.trim().isEmpty()) {
             return numberStr;
@@ -510,6 +596,15 @@ public class AdminService {
     }
 
 
+    /**
+     * Retrieves the last two entries from the provided sorted map and calculates the cost based on the specified meter type and apartment ID.
+     * If the provided map contains less than two entries, additional default entries will be added.
+     *
+     * @param sortedMap a map containing meter readings sorted by key, where the key is a timestamp or sequence identifier, and the value is the reading
+     * @param meterType the type of meter (e.g., gas, electricity, water, heating) for which the cost needs to be calculated
+     * @param apartmentId the ID of the apartment whose meter data and unit price are being processed
+     * @return a map containing the last two entries from the original map, along with the computed cost for the specified meter type
+     */
     private Map<String, String> getLast2Entries(Map<String, String> sortedMap, String meterType, Long apartmentId) {
         int unitPrice = 0;
         int consumption = 0;
@@ -545,6 +640,15 @@ public class AdminService {
         return result;
     }
 
+    /**
+     * Retrieves the last two meter values for various utility meters (e.g., gas, electricity,
+     * water, heating) associated with a given apartment. Incorporates additional information
+     * such as updated consumption status for each utility type, if available.
+     *
+     * @param apartmentId the unique identifier of the apartment for which to retrieve the last two meter values
+     * @return a map where the keys represent utility types (e.g., "gas", "electricity", "water", "heating")
+     * and the values contain related data including the last two meter readings and status of updated consumption
+     */
     public Map<String, Map<String, String>> getLast2MeterValues(Long apartmentId) {
         log.info("In getLast2MeterValues: {}", apartmentId);
 
@@ -583,6 +687,15 @@ public class AdminService {
         }
     }
 
+    /**
+     * Checks and retrieves the previous meter value for the specified meter type
+     * and apartment ID based on the latest recorded values. If no value is found
+     * or an error occurs, "0" is returned.
+     *
+     * @param meterType the type of the meter (e.g., "gas", "electricity", "water", "heating")
+     * @param apartmentId the unique identifier of the apartment
+     * @return the previous meter value as a String, or "0" if no value is available or an error occurs
+     */
     private String checkIfNewMeterValue(String meterType, Long apartmentId) {
         List<Map<String, Object>> last12Values = null;
         try {

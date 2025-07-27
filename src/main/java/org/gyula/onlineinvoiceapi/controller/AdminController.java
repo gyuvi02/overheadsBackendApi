@@ -420,7 +420,7 @@ public class AdminController {
             @RequestBody Map<String, String> body
     ) {
         log.info("/getLastMeterValues endpoint called");
-        log.info("body:" + body.toString());
+//        log.info("body:" + body.toString());
 
         try {
             authenticationService.validateRequest(apiKey, authorizationHeader);
@@ -428,9 +428,9 @@ public class AdminController {
             String meterType = body.get("meterType");
 
             Map<String,Object>lastMeterValuesWithImages = userService.sendLastYearMeterValueWithImage(meterType, Long.valueOf(apartmentId));
-            log.info("last meter values with meter type: " + lastMeterValuesWithImages.toString());
+//            log.info("last meter values with meter type: " + lastMeterValuesWithImages.toString());
             Map<String, String> lastMeterValues = userService.sendLastYearMeterValue(meterType, Long.valueOf(apartmentId));
-            log.info("Last meter values retrieved successfully: " + lastMeterValues.toString());
+//            log.info("Last meter values retrieved successfully: " + lastMeterValues.toString());
             return new ResponseEntity<>(lastMeterValuesWithImages, HttpStatus.OK);
         } catch (Exception e) {
             log.error("An error occurred during getting last 12 meter values: {}", e.getMessage());
