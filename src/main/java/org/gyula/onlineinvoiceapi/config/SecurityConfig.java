@@ -1,5 +1,6 @@
 package org.gyula.onlineinvoiceapi.config;
 
+import jakarta.servlet.http.HttpServletResponse;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -9,6 +10,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -58,7 +60,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable) // Disable CSRF if needed
                 .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Enable CORS
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/v1/login", "/api/v1/register", "/api/v1/user/*", "/api/v1/admin/*").permitAll() // Allow unrestricted access to these endpoints
+                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/api/v1/login", "/api/v1/register", "/api/v1/user/*", "/api/v1/admin/*").permitAll() // Allow unrestricted access to these endpoints
 //                        .requestMatchers("/api/v1/sendEmail").hasRole("ADMIN") // Restrict access to ADMIN role
                         .anyRequest().authenticated() // Secure all other endpoints
                 );
@@ -83,4 +85,16 @@ public class SecurityConfig {
     public BCryptPasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
+
+    @Bean
+    public AccessDeniedHandler customAccessDeniedHandler() {
+        return (request, response, accessDeniedException) -> {
+            if (!response.isCommitted()) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                response.getWriter().write("{\"error\":\"Access Denied\"}");
+                response.setContentType("application/json");
+            }
+        };
+    }
+
 }

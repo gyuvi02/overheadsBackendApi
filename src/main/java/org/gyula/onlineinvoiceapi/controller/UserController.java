@@ -56,8 +56,8 @@ public class UserController {
     @Autowired
     private AuthenticationService authenticationService;
 
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService;
+//    @Autowired
+//    private CustomUserDetailsService customUserDetailsService;
 
     @Autowired
     private ApartmentRepository apartmentRepository;

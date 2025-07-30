@@ -23,8 +23,6 @@ public class UserService {
 
     private static final Logger log = LogManager.getLogger(UserService.class);
 
-
-
     private ApartmentRepository apartmentRepository;
 
     @Autowired
