@@ -57,22 +57,27 @@ public class AdminController {
 
     private static final Logger log = LogManager.getLogger(AdminController.class);
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+    private final AdminService adminService;
+    private final AuthenticationService authenticationService;
+//    private final CustomUserDetailsService customUserDetailsService;
+    private final ApartmentRepository apartmentRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private AdminService adminService;
-
-    @Autowired
-    private AuthenticationService authenticationService;
-
-    @Autowired
-    private CustomUserDetailsService customUserDetailsService;
-
-    @Autowired
-    private ApartmentRepository apartmentRepository;
-    @Autowired
-    private UserRepository userRepository;
+    public AdminController(
+            UserService userService,
+            AdminService adminService,
+            AuthenticationService authenticationService,
+//            CustomUserDetailsService customUserDetailsService,
+            ApartmentRepository apartmentRepository,
+            UserRepository userRepository) {
+        this.userService = userService;
+        this.adminService = adminService;
+        this.authenticationService = authenticationService;
+//        this.customUserDetailsService = customUserDetailsService;
+        this.apartmentRepository = apartmentRepository;
+        this.userRepository = userRepository;
+    }
 
 
     /**
