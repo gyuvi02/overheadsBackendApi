@@ -1,0 +1,11 @@
+target/
+build/
+.git/
+.gitignore
+README.md
+Dockerfile
+.dockerignore
+node_modules/
+.idea/
+*.iml
+.vscode/

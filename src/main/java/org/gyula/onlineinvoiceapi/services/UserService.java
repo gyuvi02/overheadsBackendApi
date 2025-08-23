@@ -166,7 +166,6 @@ public class UserService {
             switch (meterType) {
                 case "gas":
                     GasMeterValues gasMeterValue = new GasMeterValues();
-                    tableName = "gas_meter_values";
                     gasMeterValue.setLatest(true);
                     gasMeterValue.setApartmentReference(newApartment);
                     gasMeterValue.setDateOfRecording(LocalDateTime.now());
@@ -174,9 +173,9 @@ public class UserService {
                     if (consumption != 0) gasMeterValue.setConsumption(consumption);
                     if(fileContent != null) gasMeterValue.setImageFile(fileContent);
                     gasMeterValueRepository.save(gasMeterValue);
-                    //Modify the previous latest value only if the save wass successful
-                    updateQuery = "UPDATE " + tableName + " SET latest = false WHERE apartment_reference = " + apartmentReference + " AND id NOT IN (SELECT id FROM " + tableName + " WHERE apartment_reference = " + apartmentReference + " ORDER BY date_of_recording DESC LIMIT 1)";
-                    jdbcTemplate.update(updateQuery);
+                    //Modify the previous latest value only if the save wass successful - using JPA
+                    log.info("In addMeterValue, latest flag set to false for apartment: {} by new repository method", newApartment.getId());
+                    gasMeterValueRepository.updateLatestFlagExceptMostRecent(newApartment);
                     break;
                 case "electricity":
                     ElectricityMeterValues electricityMeterValue = new ElectricityMeterValues();
@@ -188,7 +187,7 @@ public class UserService {
                     electricityMeterValue.setImageFile(fileContent);
                     if (consumption != 0) electricityMeterValue.setConsumption(consumption);
                     electricityMeterValueRepository.save(electricityMeterValue);
-                    //Modify the previous latest value only if the save wass successful
+                    //Modify the previous latest value only if the save wass successful - using JDBC
                     updateQuery = "UPDATE " + tableName + " SET latest = false WHERE apartment_reference = " + apartmentReference + " AND id NOT IN (SELECT id FROM " + tableName + " WHERE apartment_reference = " + apartmentReference + " ORDER BY date_of_recording DESC LIMIT 1)";
                     jdbcTemplate.update(updateQuery);
                     break;
@@ -202,7 +201,7 @@ public class UserService {
                     waterMeterValue.setImageFile(fileContent);
                     if (consumption != 0) waterMeterValue.setConsumption(consumption);
                     waterMeterValueRepository.save(waterMeterValue);
-                    //Modify the previous latest value only if the save was successful
+                    //Modify the previous latest value only if the save was successful  - using JDBC
                     updateQuery = "UPDATE " + tableName + " SET latest = false WHERE apartment_reference = " + apartmentReference + " AND id NOT IN (SELECT id FROM " + tableName + " WHERE apartment_reference = " + apartmentReference + " ORDER BY date_of_recording DESC LIMIT 1)";
                     jdbcTemplate.update(updateQuery);
                     break;
@@ -216,6 +215,7 @@ public class UserService {
                     heatingMeterValue.setImageFile(fileContent);
                     if (consumption != 0) heatingMeterValue.setConsumption(consumption);
                     heatingMeterValueRepository.save(heatingMeterValue);
+                    //Modify the previous latest value only if the save was successful  - using JDBC
                     updateQuery = "UPDATE " + tableName + " SET latest = false WHERE apartment_reference = " + apartmentReference + " AND id NOT IN (SELECT id FROM " + tableName + " WHERE apartment_reference = " + apartmentReference + " ORDER BY date_of_recording DESC LIMIT 1)";
                     jdbcTemplate.update(updateQuery);
                     break;
