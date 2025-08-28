@@ -4,6 +4,7 @@ import org.gyula.onlineinvoiceapi.model.Apartment;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.CrudRepository;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
@@ -21,6 +22,8 @@ public interface ApartmentRepository extends JpaRepository<Apartment, Long> {
     @Modifying
     @Query(value = "UPDATE apartments SET id = :newId WHERE id = :currentId", nativeQuery = true)
     void updateId(@Param("currentId") Long currentId, @Param("newId") Long newId);
+
+    //I could use one-to-many relationship in the Apartment entity class to make things simple here by using derived query methods
 
 
     @Query(value = "SELECT * FROM electricity_meter_values WHERE apartment_reference = :apartmentId ORDER BY date_of_recording DESC LIMIT 12", nativeQuery = true)

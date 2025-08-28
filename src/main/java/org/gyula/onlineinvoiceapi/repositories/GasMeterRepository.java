@@ -3,6 +3,10 @@ package org.gyula.onlineinvoiceapi.repositories;
 import org.gyula.onlineinvoiceapi.model.Apartment;
 import org.gyula.onlineinvoiceapi.model.GasMeterValues;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
@@ -20,4 +24,14 @@ import java.util.Optional;
  */
 public interface GasMeterRepository extends JpaRepository<GasMeterValues, Long> {
     Optional<GasMeterValues> findByApartmentReferenceAndLatestTrue(Apartment apartment);
+
+    @Modifying
+    @Transactional
+    @Query("UPDATE GasMeterValues g SET g.latest = false " +
+            "WHERE g.apartmentReference = :apartment " +
+            "AND g.id NOT IN (SELECT g2.id FROM GasMeterValues g2 " +
+            "WHERE g2.apartmentReference = :apartment " +
+            "ORDER BY g2.dateOfRecording DESC LIMIT 1)")
+    void updateLatestFlagExceptMostRecent(@Param("apartment") Apartment apartment);
+
 }

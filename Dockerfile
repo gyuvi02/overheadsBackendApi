@@ -24,6 +24,15 @@ RUN ls -la /app/target/
 # Runtime stage with Tomcat
 FROM tomcat:10.1-jdk17
 
+# Install dockerize for waiting on database
+ENV DOCKERIZE_VERSION v0.6.1
+RUN apt-get update && apt-get install -y wget \
+    && wget https://github.com/jwilder/dockerize/releases/download/$DOCKERIZE_VERSION/dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && tar -C /usr/local/bin -xzvf dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && rm dockerize-linux-amd64-$DOCKERIZE_VERSION.tar.gz \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
 # Remove default webapps
 RUN rm -rf /usr/local/tomcat/webapps/*
 
@@ -32,5 +41,5 @@ COPY --from=build /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
 EXPOSE 8080
 
-# Tomcat will automatically start
-CMD ["catalina.sh", "run"]
+# Use dockerize to wait for database before starting Tomcat
+CMD ["dockerize", "-wait", "tcp://db:5432", "-timeout", "60s", "catalina.sh", "run"]
