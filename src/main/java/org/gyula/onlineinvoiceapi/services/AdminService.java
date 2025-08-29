@@ -19,6 +19,7 @@ import org.gyula.onlineinvoiceapi.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.Resource;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -409,6 +410,7 @@ public class AdminService {
         try (PDDocument document = new PDDocument()) {
             PDType0Font boldFont = PDType0Font.load(document, new File(arialBoldTtfFile));
             PDType0Font regularFont = PDType0Font.load(document, new File(arialTtfFile));
+
             PDPage page = new PDPage(PDRectangle.A4);
             document.addPage(page);
             PDPageContentStream contentStream = new PDPageContentStream(document, page);
