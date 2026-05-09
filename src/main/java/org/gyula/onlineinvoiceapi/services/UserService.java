@@ -68,10 +68,9 @@ public class UserService {
     private final RateLimiter loginRateLimiter;
 //    private final JavaMailSender mailSender;
 
-    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, RegistrationTokenRepository tokenRepository, JavaMailSender mailSender, ApplicationArguments springApplicationArguments) {
+    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, RegistrationTokenRepository tokenRepository, ApplicationArguments springApplicationArguments) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-//        this.mailSender = mailSender;
         this.loginRateLimiter = RateLimiter.create(3.0);
     }
 

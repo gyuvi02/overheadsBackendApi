@@ -121,9 +121,12 @@ public class AdminService {
             message.setText(emailText);
             message.setFrom(mailSendAddress);
             log.info("Sending email from: {}", mailSendAddress);
-            mailSender.send(message);
-
-            log.info("Email sent successfully, link attached:" + link);
+            if (mailSender != null) {
+                mailSender.send(message);
+                log.info("Email sent successfully, link attached:" + link);
+            } else {
+                log.error("MailSender is not initialized. Email could not be sent.");
+            }
 
         }catch (Exception e){
             log.error("An error occurred during email sending: {}", e.getMessage());
@@ -166,9 +169,12 @@ public class AdminService {
             String fileName = apartmentAddress + "summary.pdf";
             helper.addAttachment(fileName, new ByteArrayResource(pdfBytes));
 
-            mailSender.send(mimeMessage);
-
-            log.info("Email sent to {}", userEmail);
+            if (mailSender != null) {
+                mailSender.send(mimeMessage);
+                log.info("Email sent to {}", userEmail);
+            } else {
+                log.error("MailSender is not initialized. PDF email could not be sent.");
+            }
 
         }catch (Exception e){
             log.error("An error occurred during email sending: {}", e.getMessage());
@@ -317,8 +323,12 @@ public class AdminService {
             message.setSubject(subjectText);
             message.setText(emailText);
             message.setFrom(mailSendAddress);
-            mailSender.send(message);
-            log.info("Sending email from: {}", mailSendAddress + " to " + user.getEmail());
+            if (mailSender != null) {
+                mailSender.send(message);
+                log.info("Sending email from: {}", mailSendAddress + " to " + user.getEmail());
+            } else {
+                log.error("MailSender is not initialized. Reminder email could not be sent.");
+            }
         } catch (MailException e) {
             log.error("Error sending reminding email: {}", e.getMessage());
             throw new RuntimeException(e);
@@ -353,8 +363,12 @@ public class AdminService {
             message.setSubject(subjectText);
             message.setText(emailText);
             message.setFrom(mailSendAddress);
-            mailSender.send(message);
-            log.info("Sending email from: {}", mailSendAddress + " to omegahouses.mail@gmail.com as a reminder");
+            if (mailSender != null) {
+                mailSender.send(message);
+                log.info("Sending email from: {}", mailSendAddress + " to omegahouses.mail@gmail.com as a reminder");
+            } else {
+                log.error("MailSender is not initialized. Report email could not be sent.");
+            }
         } catch (MailException e) {
             log.error("Error sending reminding email: {}", e.getMessage());
             throw new RuntimeException(e);
