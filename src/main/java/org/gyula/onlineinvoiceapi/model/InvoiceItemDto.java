@@ -4,27 +4,27 @@ public class InvoiceItemDto {
     private String apartmentAddress;
     private String email;
     private String rent;
-    private String previousGas;
+    private Object previousGas;
     private String previousGasDate;
-    private String actualGas;
+    private Object actualGas;
     private String actualGasDate;
     private String gasCost;
     private String gasNewMeterConsumption;
-    private String previousElectricity;
+    private Object previousElectricity;
     private String previousElectricityDate;
-    private String actualElectricity;
+    private Object actualElectricity;
     private String actualElectricityDate;
     private String electricityCost;
     private String electricityNewMeterConsumption;
-    private String previousWater;
+    private Object previousWater;
     private String previousWaterDate;
-    private String actualWater;
+    private Object actualWater;
     private String actualWaterDate;
     private String waterCost;
     private String waterNewMeterConsumption;
-    private String previousHeating;
+    private Object previousHeating;
     private String previousHeatingDate;
-    private String actualHeating;
+    private Object actualHeating;
     private String actualHeatingDate;
     private String heatingCost;
     private String heatingNewMeterConsumption;
@@ -35,7 +35,9 @@ public class InvoiceItemDto {
     private String totalSum;
     private String language;
 
-    public InvoiceItemDto(String rent, String previousGas, String actualGas, String gasCost, String previousElectricity, String actualElectricity, String electricityCost, String previousWater, String actualWater, String waterCost, String actualHeating, String heatingCost, String previousHeating, String cleaning, String maintenanceFee, String totalSum) {
+    public InvoiceItemDto() {}
+
+    public InvoiceItemDto(String rent, Object previousGas, Object actualGas, String gasCost, Object previousElectricity, Object actualElectricity, String electricityCost, Object previousWater, Object actualWater, String waterCost, Object actualHeating, String heatingCost, Object previousHeating, String cleaning, String maintenanceFee, String totalSum) {
         this.rent = rent;
         this.previousGas = previousGas;
         this.actualGas = actualGas;
@@ -54,6 +56,15 @@ public class InvoiceItemDto {
         this.totalSum = totalSum;
     }
 
+    private String extractValue(Object input) {
+        if (input == null) return null;
+        if (input instanceof java.util.Map) {
+            Object val = ((java.util.Map<?, ?>) input).get("value");
+            return val != null ? val.toString() : null;
+        }
+        return input.toString();
+    }
+
     public String getRent() {
         return rent;
     }
@@ -63,18 +74,18 @@ public class InvoiceItemDto {
     }
 
     public String getPreviousGas() {
-        return previousGas;
+        return extractValue(previousGas);
     }
 
-    public void setPreviousGas(String previousGas) {
+    public void setPreviousGas(Object previousGas) {
         this.previousGas = previousGas;
     }
 
     public String getActualGas() {
-        return actualGas;
+        return extractValue(actualGas);
     }
 
-    public void setActualGas(String actualGas) {
+    public void setActualGas(Object actualGas) {
         this.actualGas = actualGas;
     }
 
@@ -87,18 +98,18 @@ public class InvoiceItemDto {
     }
 
     public String getPreviousElectricity() {
-        return previousElectricity;
+        return extractValue(previousElectricity);
     }
 
-    public void setPreviousElectricity(String previousElectricity) {
+    public void setPreviousElectricity(Object previousElectricity) {
         this.previousElectricity = previousElectricity;
     }
 
     public String getActualElectricity() {
-        return actualElectricity;
+        return extractValue(actualElectricity);
     }
 
-    public void setActualElectricity(String actualElectricity) {
+    public void setActualElectricity(Object actualElectricity) {
         this.actualElectricity = actualElectricity;
     }
 
@@ -111,18 +122,18 @@ public class InvoiceItemDto {
     }
 
     public String getPreviousWater() {
-        return previousWater;
+        return extractValue(previousWater);
     }
 
-    public void setPreviousWater(String previousWater) {
+    public void setPreviousWater(Object previousWater) {
         this.previousWater = previousWater;
     }
 
     public String getActualWater() {
-        return actualWater;
+        return extractValue(actualWater);
     }
 
-    public void setActualWater(String actualWater) {
+    public void setActualWater(Object actualWater) {
         this.actualWater = actualWater;
     }
 
@@ -247,10 +258,10 @@ public class InvoiceItemDto {
     }
 
     public String getActualHeating() {
-        return actualHeating;
+        return extractValue(actualHeating);
     }
 
-    public void setActualHeating(String actualHeating) {
+    public void setActualHeating(Object actualHeating) {
         this.actualHeating = actualHeating;
     }
 
@@ -271,10 +282,10 @@ public class InvoiceItemDto {
     }
 
     public String getPreviousHeating() {
-        return previousHeating;
+        return extractValue(previousHeating);
     }
 
-    public void setPreviousHeating(String previousHeating) {
+    public void setPreviousHeating(Object previousHeating) {
         this.previousHeating = previousHeating;
     }
 

@@ -610,7 +610,7 @@ public class AdminService {
      * @param apartmentId the ID of the apartment whose meter data and unit price are being processed
      * @return a map containing the last two entries from the original map, along with the computed cost for the specified meter type
      */
-    private Map<String, String> getLast2Entries(Map<String, String> sortedMap, String meterType, Long apartmentId) {
+    private Map<String, String> getLast2Entries(Map<String, Object> sortedMap, String meterType, Long apartmentId) {
         int unitPrice = 0;
         int consumption = 0;
 
@@ -618,11 +618,12 @@ public class AdminService {
 
 
         if (sortedMap.size() < 2){
-            sortedMap.put("", "0"); //There must be 3 values in the Map as the frontend uses all 3 of them
-            sortedMap.put(meterType, "0");
-            log.info("Only one entry for {}: {}", meterType, sortedMap.get(sortedMap.keySet().iterator().next()));
-            log.info("Returning sortedMap: {}", sortedMap);
-            return sortedMap;
+            Map<String, String> result = new HashMap<>();
+            result.put("", "0"); //There must be 3 values in the Map as the frontend uses all 3 of them
+            result.put(meterType, "0");
+            log.info("Only one entry for {}: {}", meterType, sortedMap.isEmpty() ? "none" : sortedMap.get(sortedMap.keySet().iterator().next()));
+            log.info("Returning result map: {}", result);
+            return result;
         }
 
         switch (meterType) {
@@ -636,9 +637,22 @@ public class AdminService {
         List<String> keys = new ArrayList<>(sortedMap.keySet());
         for (int i = 0; i < 2; i++) {
             String key = keys.get(i);
-            result.put(key, sortedMap.get(key));
+            Object entry = sortedMap.get(key);
+            if (entry instanceof Map) {
+                result.put(key, (String) ((Map<?, ?>) entry).get("value"));
+                // We could also put the ID here if needed, but the current DTO and logic expects a String value for the reading.
+            } else {
+                result.put(key, entry != null ? entry.toString() : "0");
+            }
         }
-        consumption = Integer.parseInt(result.get(keys.get(0))) - Integer.parseInt(result.get(keys.get(1)));
+        
+        try {
+            consumption = Integer.parseInt(result.get(keys.get(0))) - Integer.parseInt(result.get(keys.get(1)));
+        } catch (Exception e) {
+            log.error("Error parsing consumption for {}: {}", meterType, e.getMessage());
+            consumption = 0;
+        }
+        
         log.info("Last 2 entries for {}: {} - {} = {}, unit price: {}", meterType, result.get(keys.get(0)), result.get(keys.get(1)), consumption, unitPrice);
         result.put(meterType, String.valueOf((consumption*unitPrice)/100));
         log.info("Returning cost for {}: {}", meterType, (consumption*unitPrice)/100);
@@ -666,22 +680,22 @@ public class AdminService {
         Map<String, Map<String, String>> meterValues = new HashMap<>();
         try {
             if (!gasValues.isEmpty()) {
-                Map<String, String> last2Gas = getLast2Entries((Map<String, String>) (Map) userService.sendLastYearMeterValue("gas", apartmentId), "gas", apartmentId);
+                Map<String, String> last2Gas = getLast2Entries(userService.sendLastYearMeterValue("gas", apartmentId), "gas", apartmentId);
                 last2Gas.put("gasNewMeterConsumption", checkIfNewMeterValue("gas", apartmentId));
                 meterValues.put("gas", last2Gas);
             }
             if (!electricityValues.isEmpty()) {
-                Map<String, String> last2Electricity = getLast2Entries((Map<String, String>) (Map) userService.sendLastYearMeterValue("electricity", apartmentId), "electricity", apartmentId);
+                Map<String, String> last2Electricity = getLast2Entries(userService.sendLastYearMeterValue("electricity", apartmentId), "electricity", apartmentId);
                 last2Electricity.put("electricityNewMeterConsumption", checkIfNewMeterValue("electricity", apartmentId));
                 meterValues.put("electricity", last2Electricity);
             }
             if (!waterValues.isEmpty()) {
-                Map<String, String> last2Water = getLast2Entries((Map<String, String>) (Map) userService.sendLastYearMeterValue("water", apartmentId), "water", apartmentId);
+                Map<String, String> last2Water = getLast2Entries(userService.sendLastYearMeterValue("water", apartmentId), "water", apartmentId);
                 last2Water.put("waterNewMeterConsumption", checkIfNewMeterValue("water", apartmentId));
                 meterValues.put("water", last2Water);
             }
             if (!heatingValues.isEmpty()) {
-                Map<String, String> last2Heating = getLast2Entries((Map<String, String>) (Map) userService.sendLastYearMeterValue("heating", apartmentId), "heating", apartmentId);
+                Map<String, String> last2Heating = getLast2Entries(userService.sendLastYearMeterValue("heating", apartmentId), "heating", apartmentId);
                 last2Heating.put("heatingNewMeterConsumption", checkIfNewMeterValue("heating", apartmentId));
                 meterValues.put("heating", last2Heating);
             }
