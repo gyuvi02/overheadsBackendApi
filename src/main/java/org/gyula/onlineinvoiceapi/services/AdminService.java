@@ -49,18 +49,18 @@ public class AdminService {
     @Autowired(required = false)
     private JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:}")
     private String mailSendAddress;
-    @Value("${frontend.address}")
+    @Value("${frontend.address:}")
     private String frontendAddress;
 
-    @Value("${file.create.folder}")
+    @Value("${file.create.folder:}")
     private String createFolder;
 
-    @Value("${arial.file}")
+    @Value("${arial.file:}")
     private String arialTtfFile;
 
-    @Value("${arial.bold.file}")
+    @Value("${arial.bold.file:}")
     private String arialBoldTtfFile;
 
     @Autowired

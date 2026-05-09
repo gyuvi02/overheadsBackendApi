@@ -19,7 +19,7 @@ public class JwtUtil {
 
     //To inject a static value from the properties file
     @Autowired
-    public JwtUtil(@Value("${spring.validation.key}") String sKey) {
+    public JwtUtil(@Value("${spring.validation.key:}") String sKey) {
         this.sKey = sKey;
     }
 

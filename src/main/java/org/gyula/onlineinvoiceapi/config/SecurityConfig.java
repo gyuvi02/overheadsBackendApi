@@ -53,7 +53,7 @@ import java.util.Enumeration;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Value("${frontend.singletonlist}")
+    @Value("${frontend.singletonlist:*}")
     private String singletonList;
 
     public static final Logger log = org.apache.logging.log4j.LogManager.getLogger(SecurityConfig.class);

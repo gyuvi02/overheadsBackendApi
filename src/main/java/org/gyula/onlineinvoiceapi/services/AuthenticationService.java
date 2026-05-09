@@ -21,10 +21,10 @@ public class AuthenticationService {
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
 
-    @Value("${spring.validation.key}")
+    @Value("${spring.validation.key:}")
     private String validationKey;
 
-    @Value("${spring.api.key}")
+    @Value("${spring.api.key:}")
     private String apiKey;
 
     public boolean validateJwtToken(String token) {
