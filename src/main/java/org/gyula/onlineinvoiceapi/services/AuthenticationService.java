@@ -44,10 +44,10 @@ public class AuthenticationService {
 
     public boolean checkApiKey(String providedApiKey) {
         if (!Objects.equals(providedApiKey, apiKey)) {
-            log.error("Invalid credentials or API key.");
-            return true;
+            log.error("Invalid credentials or API key. Provided: {}, Expected: {}", providedApiKey, apiKey);
+            return false;
         }
-        return false;
+        return true;
     }
 
     public String validateRequest(String apiKey, String authorizationHeader) throws Exception {
@@ -58,7 +58,7 @@ public class AuthenticationService {
         if (!userService.isAllowed()) {
             throw new IllegalArgumentException("Rate limit exceeded. Try again later.");
         }
-        if (checkApiKey(apiKey)) {
+        if (!checkApiKey(apiKey)) {
             log.error("Invalid API key.");
             throw new Exception("Invalid credentials or API key.");
         }

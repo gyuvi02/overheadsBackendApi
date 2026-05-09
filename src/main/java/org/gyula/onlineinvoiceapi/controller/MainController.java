@@ -105,7 +105,7 @@ public class MainController {
                 throw new IllegalArgumentException("Rate limit exceeded. Try again later.");
             }
 
-            if (authenticationService.checkApiKey(apiKey)) {
+            if (!authenticationService.checkApiKey(apiKey)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials or API key.");
             }
 
