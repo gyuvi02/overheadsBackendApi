@@ -52,7 +52,6 @@ import java.util.stream.Collectors;
  */
 @RestController
 @RequestMapping("/api/v1/admin")
-@CrossOrigin(origins = "http://localhost:4200")
 public class AdminController {
 
     private static final Logger log = LogManager.getLogger(AdminController.class);
@@ -434,7 +433,7 @@ public class AdminController {
 
             Map<String,Object>lastMeterValuesWithImages = userService.sendLastYearMeterValueWithImage(meterType, Long.valueOf(apartmentId));
 //            log.info("last meter values with meter type: " + lastMeterValuesWithImages.toString());
-            Map<String, String> lastMeterValues = userService.sendLastYearMeterValue(meterType, Long.valueOf(apartmentId));
+            Map<String, Object> lastMeterValues = userService.sendLastYearMeterValue(meterType, Long.valueOf(apartmentId));
 //            log.info("Last meter values retrieved successfully: " + lastMeterValues.toString());
             return new ResponseEntity<>(lastMeterValuesWithImages, HttpStatus.OK);
         } catch (Exception e) {
@@ -751,6 +750,63 @@ public class AdminController {
 
         }catch (Exception e){
             log.error("An error occurred while registering the new meter {}", e.getMessage());
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Updates a meter value by an administrator.
+     * This endpoint allows manual correction of meter readings.
+     *
+     * @param apiKey the API key provided in the request header
+     * @param authorizationHeader the authorization header containing the user token
+     * @param body a map containing:
+     *             - meterType: the type of the meter (e.g., "gas", "electricity")
+     *             - id: the unique ID of the record to update
+     *             - newValue: the new value for the meter reading
+     * @return a response indicating success or failure
+     */
+    @PostMapping(value = "/updateMeterValue")
+    public ResponseEntity<?> updateMeterValue(
+            @RequestHeader("API-KEY") String apiKey,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestHeader(value = "Content-Type", required = false) String contentType,
+            @RequestBody Map<String, Object> body) {
+        log.info("/updateMeterValue endpoint called. Content-Type: {}", contentType);
+        log.info("Request Body keys: {}", body != null ? body.keySet() : "null");
+        log.info("Request Body content: {}", body);
+
+        try {
+            log.info("Validating request with API-KEY and Authorization header");
+            String username = authenticationService.validateRequest(apiKey, authorizationHeader);
+            log.info("Request validated for user: {}", username);
+
+            if (!authenticationService.checkAdminAuthority(username)) {
+                log.error("Only administrators can update meter values, user {} is not authorized.", username);
+                return new ResponseEntity<>(Map.of("error", "Only administrator can update meter values, user " + username + " is not authorized."), HttpStatus.UNAUTHORIZED);
+            }
+
+            String meterType = body != null ? (String) body.get("meterType") : null;
+            Object idObj = body != null ? body.get("id") : null;
+            Object valueObj = body != null ? body.get("newValue") : null;
+
+            log.info("Received update request: meterType={}, id={}, newValue={}", meterType, idObj, valueObj);
+
+            if (meterType == null || idObj == null || valueObj == null) {
+                log.warn("Missing parameters in updateMeterValue request. Body: {}", body);
+                throw new Exception("Missing parameters: meterType, id and newValue are required.");
+            }
+
+            Long id = Long.valueOf(idObj.toString());
+            Integer newValue = Integer.valueOf(valueObj.toString());
+
+            adminService.updateMeterValue(meterType, id, newValue);
+
+            log.info("Update successful for {} with id {}", meterType, id);
+            return new ResponseEntity<>(Map.of("message", "Meter value updated successfully"), HttpStatus.OK);
+
+        } catch (Exception e) {
+            log.error("An error occurred while updating meter value: {}", e.getMessage(), e);
             return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }

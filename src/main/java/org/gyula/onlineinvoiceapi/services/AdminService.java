@@ -11,11 +11,8 @@ import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.checkerframework.checker.units.qual.C;
 import org.gyula.onlineinvoiceapi.config.TokenGenerator;
-import org.gyula.onlineinvoiceapi.model.Apartment;
-import org.gyula.onlineinvoiceapi.model.InvoiceItemDto;
-import org.gyula.onlineinvoiceapi.model.RegistrationToken;
+import org.gyula.onlineinvoiceapi.model.*;
 import org.gyula.onlineinvoiceapi.repositories.*;
-import org.gyula.onlineinvoiceapi.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ByteArrayResource;
@@ -36,8 +33,12 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 
+import org.springframework.transaction.annotation.Transactional;
+
+
 @SuppressWarnings("unused")
 @Service("adminService")
+@Transactional
 public class AdminService {
 
     private static final Logger log = LogManager.getLogger(AdminService.class);
@@ -69,6 +70,8 @@ public class AdminService {
 
     @Autowired
     private WaterMeterRepository waterMeterRepository;
+    @Autowired
+    private HeatingMeterRepository heatingMeterRepository;
     @Autowired
     private ApartmentRepository apartmentRepository;
     @Autowired
@@ -663,22 +666,22 @@ public class AdminService {
         Map<String, Map<String, String>> meterValues = new HashMap<>();
         try {
             if (!gasValues.isEmpty()) {
-                Map<String, String> last2Gas = getLast2Entries(userService.sendLastYearMeterValue("gas", apartmentId), "gas", apartmentId);
+                Map<String, String> last2Gas = getLast2Entries((Map<String, String>) (Map) userService.sendLastYearMeterValue("gas", apartmentId), "gas", apartmentId);
                 last2Gas.put("gasNewMeterConsumption", checkIfNewMeterValue("gas", apartmentId));
                 meterValues.put("gas", last2Gas);
             }
             if (!electricityValues.isEmpty()) {
-                Map<String, String> last2Electricity = getLast2Entries(userService.sendLastYearMeterValue("electricity", apartmentId), "electricity", apartmentId);
+                Map<String, String> last2Electricity = getLast2Entries((Map<String, String>) (Map) userService.sendLastYearMeterValue("electricity", apartmentId), "electricity", apartmentId);
                 last2Electricity.put("electricityNewMeterConsumption", checkIfNewMeterValue("electricity", apartmentId));
                 meterValues.put("electricity", last2Electricity);
             }
             if (!waterValues.isEmpty()) {
-                Map<String, String> last2Water = getLast2Entries(userService.sendLastYearMeterValue("water", apartmentId), "water", apartmentId);
+                Map<String, String> last2Water = getLast2Entries((Map<String, String>) (Map) userService.sendLastYearMeterValue("water", apartmentId), "water", apartmentId);
                 last2Water.put("waterNewMeterConsumption", checkIfNewMeterValue("water", apartmentId));
                 meterValues.put("water", last2Water);
             }
             if (!heatingValues.isEmpty()) {
-                Map<String, String> last2Heating = getLast2Entries(userService.sendLastYearMeterValue("heating", apartmentId), "heating", apartmentId);
+                Map<String, String> last2Heating = getLast2Entries((Map<String, String>) (Map) userService.sendLastYearMeterValue("heating", apartmentId), "heating", apartmentId);
                 last2Heating.put("heatingNewMeterConsumption", checkIfNewMeterValue("heating", apartmentId));
                 meterValues.put("heating", last2Heating);
             }
@@ -715,6 +718,54 @@ public class AdminService {
             throw new RuntimeException(e);
         }
         return "0";
+    }
+
+    /**
+     * Updates the value of a specific meter reading identified by its ID and type.
+     * This method is used by administrators to manually correct meter values.
+     *
+     * @param meterType the type of the meter (e.g., "gas", "electricity", "water", "heating")
+     * @param id the unique identifier of the meter reading record
+     * @param newValue the new value to be set for the meter reading
+     * @throws Exception if the meterType is invalid or the record with the given ID is not found
+     */
+    public void updateMeterValue(String meterType, Long id, Integer newValue) throws Exception {
+        log.info("Updating meter value for type: {}, id: {}, new value: {}", meterType, id, newValue);
+        if (meterType == null) {
+            throw new Exception("meterType is null");
+        }
+        switch (meterType) {
+            case "gas" -> {
+                GasMeterValues gas = gasMeterRepository.findById(id)
+                        .orElseThrow(() -> new Exception("Gas meter record not found with id: " + id));
+                gas.setGasValue(newValue);
+                gasMeterRepository.save(gas);
+                log.info("Gas meter value updated and saved");
+            }
+            case "electricity" -> {
+                ElectricityMeterValues electricity = electricityMeterRepository.findById(id)
+                        .orElseThrow(() -> new Exception("Electricity meter record not found with id: " + id));
+                electricity.setElectricityValue(newValue);
+                electricityMeterRepository.save(electricity);
+                log.info("Electricity meter value updated and saved");
+            }
+            case "water" -> {
+                WaterMeterValues water = waterMeterRepository.findById(id)
+                        .orElseThrow(() -> new Exception("Water meter record not found with id: " + id));
+                water.setWaterValue(newValue);
+                waterMeterRepository.save(water);
+                log.info("Water meter value updated and saved");
+            }
+            case "heating" -> {
+                HeatingMeterValues heating = heatingMeterRepository.findById(id)
+                        .orElseThrow(() -> new Exception("Heating meter record not found with id: " + id));
+                heating.setHeatingValue(newValue);
+                heatingMeterRepository.save(heating);
+                log.info("Heating meter value updated and saved");
+            }
+            default -> throw new Exception("Invalid meterType: " + meterType);
+        }
+        log.info("Meter value update transaction completed successfully");
     }
 
 }

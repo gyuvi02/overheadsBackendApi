@@ -280,22 +280,35 @@ public class UserService {
      *         and the values are the corresponding meter readings.
      * @throws Exception if an invalid meter type is provided or if any issue occurs while retrieving the data.
      */
-    public Map<String, String> sendLastYearMeterValue(String meterType, Long apartmentId) throws Exception {
+    public Map<String, Object> sendLastYearMeterValue(String meterType, Long apartmentId) throws Exception {
         log.info("In sendLastYearMeterValue");
         List<Map<String, Object>> result;
         switch (meterType) {
-            case "gas" -> {result = apartmentRepository.findLatestGasMeterValues(apartmentId); break;}
-            case "electricity" -> {result = apartmentRepository.findLatestElectricityMeterValues(apartmentId); break;}
-            case "water" -> {result = apartmentRepository.findLatestWaterMeterValues(apartmentId); break;}
-            case "heating" -> {result = apartmentRepository.findLatestHeatingMeterValues(apartmentId); break;}
+            case "gas" -> result = apartmentRepository.findLatestGasMeterValues(apartmentId);
+            case "electricity" -> result = apartmentRepository.findLatestElectricityMeterValues(apartmentId);
+            case "water" -> result = apartmentRepository.findLatestWaterMeterValues(apartmentId);
+            case "heating" -> result = apartmentRepository.findLatestHeatingMeterValues(apartmentId);
             default -> throw new Exception("Invalid meterType: " + meterType);
         }
 
-        Map<String, String> resultMap = new LinkedHashMap<>();
+        Map<String, Object> resultMap = new LinkedHashMap<>();
         result.stream()
-                .sorted((m1, m2) -> m2.get("date_of_recording").toString().compareTo(m1.get("date_of_recording").toString()))
+                .filter(m -> m.get("date_of_recording") != null)
+                .sorted((m1, m2) -> {
+                    Object d1 = m1.get("date_of_recording");
+                    Object d2 = m2.get("date_of_recording");
+                    if (d1 == null) return 1;
+                    if (d2 == null) return -1;
+                    return d2.toString().compareTo(d1.toString());
+                })
                 .forEach(map -> {
-                    resultMap.put(map.get("date_of_recording").toString(), map.get(meterType + "_value").toString());
+                    Object dateObj = map.get("date_of_recording");
+                    if (dateObj != null) {
+                        Map<String, Object> entry = new HashMap<>();
+                        entry.put("value", map.get(meterType + "_value") != null ? map.get(meterType + "_value").toString() : "0");
+                        entry.put("id", map.get("id"));
+                        resultMap.put(dateObj.toString(), entry);
+                    }
                 });
 
         result.forEach((r) -> System.out.println("result outcome: " + r.values()));
@@ -315,29 +328,36 @@ public class UserService {
      */
     public Map<String, Object> sendLastYearMeterValueWithImage(String meterType, Long apartmentId) throws Exception {
         log.info("In sendLastYearMeterValueWithImage");
-        List<Map<String, Object>> result = null;
+        List<Map<String, Object>> result;
         switch (meterType) {
-            case "gas" -> {result = apartmentRepository.findLatestGasMeterValues(apartmentId);}
-            case "electricity" -> {result = apartmentRepository.findLatestElectricityMeterValues(apartmentId);}
-            case "water" -> {result = apartmentRepository.findLatestWaterMeterValues(apartmentId);}
-            case "heating" -> {result = apartmentRepository.findLatestHeatingMeterValues(apartmentId);}
+            case "gas" -> result = apartmentRepository.findLatestGasMeterValues(apartmentId);
+            case "electricity" -> result = apartmentRepository.findLatestElectricityMeterValues(apartmentId);
+            case "water" -> result = apartmentRepository.findLatestWaterMeterValues(apartmentId);
+            case "heating" -> result = apartmentRepository.findLatestHeatingMeterValues(apartmentId);
             default -> throw new Exception("Invalid meterType: " + meterType);
         }
 
         Map<String, Object> resultMap = new LinkedHashMap<>();
         result.stream()
-                .sorted((m1, m2) -> m2.get("date_of_recording").toString().compareTo(m1.get("date_of_recording").toString()))
+                .filter(m -> m.get("date_of_recording") != null)
+                .sorted((m1, m2) -> {
+                    Object d1 = m1.get("date_of_recording");
+                    Object d2 = m2.get("date_of_recording");
+                    if (d1 == null) return 1;
+                    if (d2 == null) return -1;
+                    return d2.toString().compareTo(d1.toString());
+                })
                 .forEach(map -> {
-                    log.info("Found meter value: {} for date: ", map.get(meterType + "_value"));
-                    Map<String, Object> valueMap = new HashMap<>();
-                    valueMap.put("value", map.get(meterType + "_value"));
-                    valueMap.put("date", map.get("date_of_recording"));
-                    if (map.get("image_file") != null) {
+                    Object dateObj = map.get("date_of_recording");
+                    if (dateObj != null) {
+                        log.info("Found meter value: {} for date: {}", map.get(meterType + "_value"), dateObj);
+                        Map<String, Object> valueMap = new HashMap<>();
+                        valueMap.put("value", map.get(meterType + "_value"));
+                        valueMap.put("date", dateObj);
                         valueMap.put("image", map.get("image_file"));
-                    }else{
-                        valueMap.put("image", null);
+                        valueMap.put("id", map.get("id"));
+                        resultMap.put("date_" + dateObj, valueMap);
                     }
-                    resultMap.put("date_" + map.get("date_of_recording"), valueMap);
                 });
 
         return resultMap;

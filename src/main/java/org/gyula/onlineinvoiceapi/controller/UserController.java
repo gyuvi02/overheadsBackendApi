@@ -172,7 +172,7 @@ public class UserController {
      */
     //Get the last 12 meter values from the selected apartment
     @PostMapping(value = "/getLastMeterValues")
-    public ResponseEntity<Map<String, String>> getLastMeterValues(
+    public ResponseEntity<?> getLastMeterValues(
             @RequestHeader("API-KEY") String apiKey,
             @RequestHeader("Authorization") String authorizationHeader,
             @RequestBody Map<String, String> body
@@ -188,7 +188,7 @@ public class UserController {
             lastMeterValuesWithImages.forEach((key, value) -> log.info("Key: {}, Value: {}", key, value));
 
 
-            Map<String, String> lastMeterValues = userService.sendLastYearMeterValue(meterType, Long.valueOf(apartmentId));
+            Map<String, Object> lastMeterValues = userService.sendLastYearMeterValue(meterType, Long.valueOf(apartmentId));
             log.info("Last meter values retrieved successfully");
             return new ResponseEntity<>(lastMeterValues, HttpStatus.OK);
         } catch (Exception e) {
