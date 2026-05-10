@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -183,10 +184,24 @@ public class UserController {
             authenticationService.validateRequest(apiKey, authorizationHeader);
             String apartmentId = body.get("apartmentId");
             String meterType = body.get("meterType");
-            
-            Map<String,Object>lastMeterValuesWithImages = userService.sendLastYearMeterValueWithImage(meterType, Long.valueOf(apartmentId));
-            lastMeterValuesWithImages.forEach((key, value) -> log.info("Key: {}, Value: {}", key, value));
+            boolean withImage = "1".equals(body.get("withImage"));
 
+            if (withImage) {
+                Map<String, Object> lastMeterValuesWithImages = userService.sendLastYearMeterValueWithImage(meterType, Long.valueOf(apartmentId));
+                Map<String, Object> responseMap = new LinkedHashMap<>();
+
+                lastMeterValuesWithImages.forEach((key, value) -> {
+                    if (key.startsWith("date_")) {
+                        Map<String, Object> entry = (Map<String, Object>) value;
+                        Map<String, Object> newEntry = new HashMap<>();
+                        newEntry.put("meterValue", entry.get("value"));
+                        newEntry.put("image", entry.get("image"));
+                        responseMap.put((String) entry.get("date").toString(), newEntry);
+                    }
+                });
+                log.info("Last meter values with images retrieved successfully");
+                return new ResponseEntity<>(responseMap, HttpStatus.OK);
+            }
 
             Map<String, Object> lastMeterValues = userService.sendLastYearMeterValue(meterType, Long.valueOf(apartmentId));
             log.info("Last meter values retrieved successfully");
