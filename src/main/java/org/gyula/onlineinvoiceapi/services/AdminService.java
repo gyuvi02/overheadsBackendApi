@@ -432,20 +432,39 @@ public class AdminService {
             document.addPage(page);
             PDPageContentStream contentStream = new PDPageContentStream(document, page);
             // Set starting Y position and margins
-            float yStart = page.getMediaBox().getHeight() - 70;
             float margin = 50;
             float width = page.getMediaBox().getWidth() - 2 * margin;
-            contentStream.setFont(regularFont, 16);
-            float titleWidth = boldFont.getStringWidth(invoiceData.getApartmentAddress()) / 1000 * 16;
+
+            // Header banner: apartment address with larger font, white text on black background
+            float headerFontSize = 24;
+            float headerHeight = 42;
+            float bannerTop = page.getMediaBox().getHeight() - 30;
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+            contentStream.addRect(0, bannerTop - headerHeight, page.getMediaBox().getWidth(), headerHeight);
+            contentStream.fill();
+            contentStream.setNonStrokingColor(1f, 1f, 1f);
+            contentStream.setFont(boldFont, headerFontSize);
+            float titleWidth = boldFont.getStringWidth(invoiceData.getApartmentAddress()) / 1000 * headerFontSize;
             float xAddress = (page.getMediaBox().getWidth() - titleWidth) / 2;
+            float addressY = bannerTop - headerHeight + (headerHeight - headerFontSize) / 2 + 4;
             contentStream.beginText();
-            contentStream.newLineAtOffset(xAddress, yStart);
+            contentStream.newLineAtOffset(xAddress, addressY);
             contentStream.showText(invoiceData.getApartmentAddress());
             contentStream.endText();
+            // Reset to black for the rest of the document
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+
+            // Separator line below the header
+            float separatorY = bannerTop - headerHeight - 12;
+            contentStream.setLineWidth(1f);
+            contentStream.moveTo(margin, separatorY);
+            contentStream.lineTo(page.getMediaBox().getWidth() - margin, separatorY);
+            contentStream.stroke();
+
+            float yStart = separatorY - 25;
             contentStream.setFont(regularFont, 12);
             float warningWidth = boldFont.getStringWidth(notOfficialInvoice) / 1000 * 12;
             float xWarning = (page.getMediaBox().getWidth() - warningWidth) / 2;
-            yStart -= 30;
             contentStream.beginText();
             contentStream.newLineAtOffset(xWarning, yStart);
             contentStream.showText(notOfficialInvoice);
@@ -526,6 +545,22 @@ public class AdminService {
             contentStream.newLineAtOffset(xTotal, (tableY - 50));
             contentStream.showText(totalLine);
             contentStream.endText();
+
+            // Footer: exact PDF generation timestamp with locale-aware date/time format
+            LocalDateTime generatedAt = LocalDateTime.now();
+            DateTimeFormatter footerFormatter = isHungarian
+                    ? DateTimeFormatter.ofPattern("yyyy. MM. dd. HH:mm")
+                    : DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            String footerLabel = isHungarian ? "A PDF generálásának időpontja: " : "PDF generated at: ";
+            String footerText = footerLabel + generatedAt.format(footerFormatter);
+            contentStream.setFont(regularFont, 9);
+            float footerWidth = regularFont.getStringWidth(footerText) / 1000 * 9;
+            float xFooter = (page.getMediaBox().getWidth() - footerWidth) / 2;
+            contentStream.beginText();
+            contentStream.newLineAtOffset(xFooter, 30);
+            contentStream.showText(footerText);
+            contentStream.endText();
+
             contentStream.close();
             String fileName = "Rent_" + invoiceData.getApartmentAddress() + "_" + LocalDate.now()+ ".pdf";
             int commaIndex = invoiceData.getApartmentAddress().indexOf(",");
