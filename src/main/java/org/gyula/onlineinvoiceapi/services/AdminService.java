@@ -436,16 +436,20 @@ public class AdminService {
             float width = page.getMediaBox().getWidth() - 2 * margin;
 
             // Header banner: apartment address with larger font, white text on black background
-            float headerFontSize = 24;
+            float headerFontSize = 22;
             float headerHeight = 42;
             float bannerTop = page.getMediaBox().getHeight() - 30;
-            contentStream.setNonStrokingColor(0f, 0f, 0f);
-            contentStream.addRect(0, bannerTop - headerHeight, page.getMediaBox().getWidth(), headerHeight);
-            contentStream.fill();
-            contentStream.setNonStrokingColor(1f, 1f, 1f);
             contentStream.setFont(boldFont, headerFontSize);
             float titleWidth = boldFont.getStringWidth(invoiceData.getApartmentAddress()) / 1000 * headerFontSize;
             float xAddress = (page.getMediaBox().getWidth() - titleWidth) / 2;
+            // Black banner only as wide as the text plus 2 cm padding on both sides (2 cm = 56.7 pt)
+            float bannerPadding = 56.7f;
+            float bannerX = xAddress - bannerPadding;
+            float bannerWidth = titleWidth + 2 * bannerPadding;
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
+            contentStream.addRect(bannerX, bannerTop - headerHeight, bannerWidth, headerHeight);
+            contentStream.fill();
+            contentStream.setNonStrokingColor(1f, 1f, 1f);
             float addressY = bannerTop - headerHeight + (headerHeight - headerFontSize) / 2 + 4;
             contentStream.beginText();
             contentStream.newLineAtOffset(xAddress, addressY);
@@ -549,8 +553,8 @@ public class AdminService {
             // Footer: exact PDF generation timestamp with locale-aware date/time format
             LocalDateTime generatedAt = LocalDateTime.now();
             DateTimeFormatter footerFormatter = isHungarian
-                    ? DateTimeFormatter.ofPattern("yyyy. MM. dd. HH:mm")
-                    : DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+                    ? DateTimeFormatter.ofPattern("yyyy. MM. dd. HH:mm", new Locale("hu"))
+                    : DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a", Locale.US);
             String footerLabel = isHungarian ? "A PDF generálásának időpontja: " : "PDF generated at: ";
             String footerText = footerLabel + generatedAt.format(footerFormatter);
             contentStream.setFont(regularFont, 9);
