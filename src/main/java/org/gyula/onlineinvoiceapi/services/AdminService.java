@@ -29,6 +29,7 @@ import java.nio.file.Paths;
 import java.sql.Timestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
@@ -469,10 +470,14 @@ public class AdminService {
             contentStream.setFont(regularFont, 12);
             float warningWidth = boldFont.getStringWidth(notOfficialInvoice) / 1000 * 12;
             float xWarning = (page.getMediaBox().getWidth() - warningWidth) / 2;
+            // "Not an official invoice" warning shown in red
+            contentStream.setNonStrokingColor(1f, 0f, 0f);
             contentStream.beginText();
             contentStream.newLineAtOffset(xWarning, yStart);
             contentStream.showText(notOfficialInvoice);
             contentStream.endText();
+            // Reset to black for the rest of the document
+            contentStream.setNonStrokingColor(0f, 0f, 0f);
 
             // Space before table
             float tableY = yStart - 40;
@@ -550,8 +555,8 @@ public class AdminService {
             contentStream.showText(totalLine);
             contentStream.endText();
 
-            // Footer: exact PDF generation timestamp with locale-aware date/time format
-            LocalDateTime generatedAt = LocalDateTime.now();
+            // Footer: exact PDF generation timestamp with locale-aware date/time format (Budapest time)
+            LocalDateTime generatedAt = LocalDateTime.now(ZoneId.of("Europe/Budapest"));
             DateTimeFormatter footerFormatter = isHungarian
                     ? DateTimeFormatter.ofPattern("yyyy. MM. dd. HH:mm", new Locale("hu"))
                     : DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a", Locale.US);
