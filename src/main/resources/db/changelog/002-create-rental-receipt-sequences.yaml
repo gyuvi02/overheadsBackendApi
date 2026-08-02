@@ -1,0 +1,45 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-rental-receipt-sequences
+      author: codex
+      changes:
+        - createTable:
+            tableName: rental_receipt_sequences
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rental_receipt_sequences
+                    nullable: false
+              - column:
+                  name: apartment_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: receipt_year
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: last_number
+                  type: INT
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+        - addForeignKeyConstraint:
+            baseTableName: rental_receipt_sequences
+            baseColumnNames: apartment_id
+            constraintName: fk_rental_receipt_sequences_apartment
+            referencedTableName: apartments
+            referencedColumnNames: id
+        - addUniqueConstraint:
+            tableName: rental_receipt_sequences
+            columnNames: apartment_id, receipt_year
+            constraintName: uk_rental_receipt_sequence_apartment_year
+      rollback:
+        - dropTable:
+            tableName: rental_receipt_sequences

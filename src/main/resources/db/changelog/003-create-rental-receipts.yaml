@@ -1,0 +1,155 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-rental-receipts
+      author: codex
+      changes:
+        - createTable:
+            tableName: rental_receipts
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    primaryKeyName: pk_rental_receipts
+                    nullable: false
+              - column:
+                  name: receipt_number
+                  type: VARCHAR(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: apartment_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tenant_user_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tenant_name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: tenant_address
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: property_address
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: period_year
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: period_month
+                  type: INT
+                  constraints:
+                    nullable: false
+              - column:
+                  name: issue_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payment_date
+                  type: DATE
+                  constraints:
+                    nullable: false
+              - column:
+                  name: payment_method
+                  type: VARCHAR(30)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: rent_amount
+                  type: DECIMAL(12, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: utility_amount
+                  type: DECIMAL(12, 2)
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: maintenance_fee
+                  type: DECIMAL(12, 2)
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: cleaning_amount
+                  type: DECIMAL(12, 2)
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: other_text
+                  type: VARCHAR(255)
+              - column:
+                  name: other_amount
+                  type: DECIMAL(12, 2)
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: total_amount
+                  type: DECIMAL(12, 2)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: VARCHAR(30)
+                  defaultValue: ISSUED
+                  constraints:
+                    nullable: false
+              - column:
+                  name: pdf_path
+                  type: VARCHAR(1024)
+              - column:
+                  name: pdf_sha256
+                  type: VARCHAR(64)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+                  constraints:
+                    nullable: false
+        - addUniqueConstraint:
+            tableName: rental_receipts
+            columnNames: receipt_number
+            constraintName: uk_rental_receipts_receipt_number
+        - addForeignKeyConstraint:
+            baseTableName: rental_receipts
+            baseColumnNames: apartment_id
+            constraintName: fk_rental_receipts_apartment
+            referencedTableName: apartments
+            referencedColumnNames: id
+        - addForeignKeyConstraint:
+            baseTableName: rental_receipts
+            baseColumnNames: tenant_user_id
+            constraintName: fk_rental_receipts_tenant_user
+            referencedTableName: users
+            referencedColumnNames: id
+        - createIndex:
+            tableName: rental_receipts
+            indexName: idx_rental_receipts_apartment_period
+            columns:
+              - column:
+                  name: apartment_id
+              - column:
+                  name: period_year
+              - column:
+                  name: period_month
+      rollback:
+        - dropTable:
+            tableName: rental_receipts

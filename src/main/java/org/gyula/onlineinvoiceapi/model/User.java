@@ -28,6 +28,12 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
+    @Column(name = "full_name")
+    private String fullName;
+
+    @Column(name = "permanent_address")
+    private String permanentAddress;
+
     @Column(nullable = false)
     private boolean enabled;
 
@@ -68,6 +74,22 @@ public class User {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getPermanentAddress() {
+        return permanentAddress;
+    }
+
+    public void setPermanentAddress(String permanentAddress) {
+        this.permanentAddress = permanentAddress;
     }
 
     public boolean isEnabled() {

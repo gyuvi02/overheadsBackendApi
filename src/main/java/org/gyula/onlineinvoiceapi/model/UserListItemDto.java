@@ -20,18 +20,27 @@ public class UserListItemDto {
     private Long id;
     private String username;
     private String email;
+    private String fullName;
+    private String permanentAddress;
     private Long apartmentId;
 
-    public UserListItemDto(Long id, String username, String email, Long apartmentId) {
+    public UserListItemDto() {
+    }
+
+    public UserListItemDto(Long id, String username, String email, String fullName, String permanentAddress, Long apartmentId) {
         this.id = id;
         this.username = username;
         this.email = email;
+        this.fullName = fullName;
+        this.permanentAddress = permanentAddress;
         this.apartmentId = apartmentId;
     }
 
     public Long getId() { return id; }
     public String getUsername() { return username; }
     public String getEmail() { return email; }
+    public String getFullName() { return fullName; }
+    public String getPermanentAddress() { return permanentAddress; }
     public Long getApartmentId() { return apartmentId; }
 
     public void setId(Long id) {
@@ -44,6 +53,14 @@ public class UserListItemDto {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public void setPermanentAddress(String permanentAddress) {
+        this.permanentAddress = permanentAddress;
     }
 
     public void setApartmentId(Long apartmentId) {

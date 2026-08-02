@@ -11,6 +11,7 @@ import org.gyula.onlineinvoiceapi.repositories.UserRepository;
 import org.gyula.onlineinvoiceapi.services.AdminService;
 import org.gyula.onlineinvoiceapi.services.AuthenticationService;
 import org.gyula.onlineinvoiceapi.services.CustomUserDetailsService;
+import org.gyula.onlineinvoiceapi.services.RentalReceiptService;
 import org.gyula.onlineinvoiceapi.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -62,6 +63,7 @@ public class AdminController {
 //    private final CustomUserDetailsService customUserDetailsService;
     private final ApartmentRepository apartmentRepository;
     private final UserRepository userRepository;
+    private final RentalReceiptService rentalReceiptService;
 
     public AdminController(
             UserService userService,
@@ -69,13 +71,15 @@ public class AdminController {
             AuthenticationService authenticationService,
 //            CustomUserDetailsService customUserDetailsService,
             ApartmentRepository apartmentRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            RentalReceiptService rentalReceiptService) {
         this.userService = userService;
         this.adminService = adminService;
         this.authenticationService = authenticationService;
 //        this.customUserDetailsService = customUserDetailsService;
         this.apartmentRepository = apartmentRepository;
         this.userRepository = userRepository;
+        this.rentalReceiptService = rentalReceiptService;
     }
 
 
@@ -491,6 +495,8 @@ public class AdminController {
                             user.getId(),
                             user.getUsername(),
                             user.getEmail(),
+                            user.getFullName(),
+                            user.getPermanentAddress(),
                             user.getApartment() != null ? user.getApartment().getId() : null
                     )).collect(Collectors.toList());
 
@@ -591,6 +597,12 @@ public class AdminController {
 
             originalUser.setUsername(modifiedUser.getUsername());
             originalUser.setEmail(modifiedUser.getEmail());
+            if (modifiedUser.getFullName() != null) {
+                originalUser.setFullName(modifiedUser.getFullName().trim());
+            }
+            if (modifiedUser.getPermanentAddress() != null) {
+                originalUser.setPermanentAddress(modifiedUser.getPermanentAddress().trim());
+            }
             if (modifiedUser.getApartmentId() != null) {
                 Apartment apartment = apartmentRepository.findById(modifiedUser.getApartmentId()).orElse(null);
                 originalUser.setApartment(apartment);
@@ -635,6 +647,34 @@ public class AdminController {
             return new ResponseEntity<>("An error occurred while creating the invoice: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
+    }
+
+    @PostMapping(value = "/createRentalReceipt")
+    public ResponseEntity<?> createRentalReceipt(
+            @RequestHeader("API-KEY") String apiKey,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody RentalReceiptCreateRequest receiptRequest) {
+
+        log.info("/createRentalReceipt endpoint called");
+
+        try {
+            String username = authenticationService.validateRequest(apiKey, authorizationHeader);
+
+            if (!authenticationService.checkAdminAuthority(username)) {
+                log.error("Only administrators can create a rental receipt, user {} is not authorized.", username);
+                return new ResponseEntity<>("Only administrator can create a rental receipt, user " + username + " is not authorized.", HttpStatus.UNAUTHORIZED);
+            }
+
+            RentalReceiptPdfResult result = rentalReceiptService.createReceiptWithPdf(receiptRequest);
+            return new ResponseEntity<>(new RentalReceiptResponse(result.getReceipt(), result.getPdfBase64()), HttpStatus.CREATED);
+
+        } catch (IllegalArgumentException e) {
+            log.info("Rental receipt creation failed: {}", e.getMessage());
+            return new ResponseEntity<>(Map.of("error", e.getMessage()), HttpStatus.BAD_REQUEST);
+        } catch (Exception e) {
+            log.error("An error occurred while creating the rental receipt: {}", e.getMessage());
+            return new ResponseEntity<>("An error occurred while creating the rental receipt: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PostMapping(value = "/getUserByApartmentId")

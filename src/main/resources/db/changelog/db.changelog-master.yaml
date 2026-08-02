@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/001-add-tenant-receipt-fields.yaml
+  - include:
+      file: db/changelog/002-create-rental-receipt-sequences.yaml
+  - include:
+      file: db/changelog/003-create-rental-receipts.yaml

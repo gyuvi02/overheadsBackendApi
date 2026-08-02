@@ -19,6 +19,8 @@ package org.gyula.onlineinvoiceapi.model;
 public class RegisterRequest {
     private String email;
     private String username;
+    private String fullName;
+    private String permanentAddress;
     private String password;
     private String token;
     private String apartmentId;
@@ -38,6 +40,22 @@ public class RegisterRequest {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    public String getFullName() {
+        return fullName;
+    }
+
+    public void setFullName(String fullName) {
+        this.fullName = fullName;
+    }
+
+    public String getPermanentAddress() {
+        return permanentAddress;
+    }
+
+    public void setPermanentAddress(String permanentAddress) {
+        this.permanentAddress = permanentAddress;
     }
 
     public String getPassword() {

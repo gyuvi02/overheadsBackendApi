@@ -88,12 +88,20 @@ public class UserService {
         if (userRepository.findByUsername(registerRequest.getUsername()).isPresent()) {
             throw new IllegalArgumentException("Username already exists");
         }
+        if (registerRequest.getFullName() == null || registerRequest.getFullName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Full legal name is required for accounting receipts");
+        }
+        if (registerRequest.getPermanentAddress() == null || registerRequest.getPermanentAddress().trim().isEmpty()) {
+            throw new IllegalArgumentException("Permanent address is required for accounting receipts");
+        }
         log.info("In registerUser");
 
         try {
             User user = new User();            
             user.setEmail(registerRequest.getEmail());
             user.setUsername(registerRequest.getUsername());
+            user.setFullName(registerRequest.getFullName().trim());
+            user.setPermanentAddress(registerRequest.getPermanentAddress().trim());
             user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));  // Encrypt the password
             user.setEnabled(true);
             Apartment userApartment = apartmentRepository.findById(Long.parseLong(registerRequest.getApartmentId())).orElseThrow(() -> new IllegalArgumentException("Apartment not found with id: " + registerRequest.getApartmentId()));

@@ -1,0 +1,22 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-add-tenant-receipt-fields
+      author: codex
+      changes:
+        - addColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: full_name
+                  type: varchar(255)
+              - column:
+                  name: permanent_address
+                  type: varchar(255)
+      rollback:
+        - dropColumn:
+            tableName: users
+            columns:
+              - column:
+                  name: full_name
+              - column:
+                  name: permanent_address
