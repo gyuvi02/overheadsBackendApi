@@ -147,9 +147,10 @@ public class RentalReceiptPdfService {
         y -= 64;
 
         showText(content, regularFont, 10, margin, y, "Ez a dokumentum sz\u00e1mviteli bizonylat, nem sz\u00e1mla.");
+        showText(content, regularFont, 10, margin, y - 13, "This document is an accounting receipt, not an invoice.");
         content.setLineWidth(0.25f);
-        content.moveTo(margin, y - 8);
-        content.lineTo(margin + width, y - 8);
+        content.moveTo(margin, y - 21);
+        content.lineTo(margin + width, y - 21);
         content.stroke();
     }
 
