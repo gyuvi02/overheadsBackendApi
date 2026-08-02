@@ -98,10 +98,12 @@ public class RentalReceiptPdfService {
         float width = page.getMediaBox().getWidth() - 2 * margin;
         float y = page.getMediaBox().getHeight() - 42;
 
-        drawBox(content, margin, y - 70, width, 64, 0.94f);
-        centeredText(content, boldFont, 18, "SZ\u00c1MVITELI BIZONYLAT", y - 20, page);
-        centeredText(content, regularFont, 10, "Accounting receipt - not an invoice", y - 40, page);
-        y -= 82;
+        float headerBottom = y - 70;
+        float headerHeight = 64;
+        drawBox(content, margin, headerBottom, width, headerHeight, 0.94f);
+        centeredTextInBox(content, boldFont, 18, "SZ\u00c1MVITELI BIZONYLAT", headerBottom, headerHeight, 7, page);
+        centeredTextInBox(content, regularFont, 10, "Accounting receipt - not an invoice", headerBottom, headerHeight, -10, page);
+        y -= 78;
 
         y = beginSection(content, boldFont, "Bizonylat adatai / Receipt details", margin, y, width);
         y = twoColumnLabelValue(content, boldFont, regularFont,
@@ -141,8 +143,8 @@ public class RentalReceiptPdfService {
         y = endSection(y);
 
         y = beginSection(content, boldFont, "B\u00e9rbead\u00f3i al\u00e1\u00edr\u00e1s / Landlord signature", margin, y, width);
-        drawLandlordSignature(document, content, margin + width / 2, y - 28);
-        y -= 86;
+        drawLandlordSignature(document, content, margin + width / 2, y - 23);
+        y -= 64;
 
         showText(content, regularFont, 10, margin, y, "Ez a dokumentum sz\u00e1mviteli bizonylat, nem sz\u00e1mla.");
         content.setLineWidth(0.25f);
@@ -172,6 +174,14 @@ public class RentalReceiptPdfService {
         return y;
     }
 
+    private void centeredTextInBox(PDPageContentStream content, PDType0Font font, int size, String text,
+                                   float boxBottom, float boxHeight, float yOffset, PDPage page) throws IOException {
+        float textWidth = font.getStringWidth(text) / 1000 * size;
+        float x = (page.getMediaBox().getWidth() - textWidth) / 2;
+        float y = boxBottom + boxHeight / 2 - size / 3f + yOffset;
+        showText(content, font, size, x, y, text);
+    }
+
     private float beginSection(PDPageContentStream content, PDType0Font boldFont, String title, float x, float y, float width) throws IOException {
         content.setLineWidth(0.8f);
         content.moveTo(x, y);
@@ -184,11 +194,11 @@ public class RentalReceiptPdfService {
         content.moveTo(x, y);
         content.lineTo(x + width, y);
         content.stroke();
-        return y - 14;
+        return y - 11;
     }
 
     private float endSection(float y) {
-        return y - 13;
+        return y - 9;
     }
 
     private float subsection(PDPageContentStream content, PDType0Font boldFont, String title, float x, float y) throws IOException {
@@ -199,7 +209,7 @@ public class RentalReceiptPdfService {
     private float labelValue(PDPageContentStream content, PDType0Font labelFont, PDType0Font valueFont, String label, String value, float x, float y) throws IOException {
         showText(content, labelFont, 9, x, y, label + ":");
         showText(content, valueFont, 10, x + 175, y, nullToDash(value));
-        return y - 16;
+        return y - 14;
     }
 
     private float twoColumnLabelValue(PDPageContentStream content, PDType0Font labelFont, PDType0Font valueFont,
@@ -209,14 +219,14 @@ public class RentalReceiptPdfService {
         showText(content, valueFont, 10, x, y - 13, nullToDash(leftValue));
         showText(content, labelFont, 9, x + 285, y, rightLabel + ":");
         showText(content, valueFont, 10, x + 285, y - 13, nullToDash(rightValue));
-        return y - 32;
+        return y - 29;
     }
 
     private float tableHeader(PDPageContentStream content, PDType0Font font, float x, float y, float width) throws IOException {
         drawBox(content, x, y - 14, width, 20, 0.90f);
         showText(content, font, 10, x + 8, y - 8, "Megnevez\u00e9s / Item");
         showText(content, font, 10, x + width - 98, y - 8, "\u00d6sszeg / Amount");
-        return y - 26;
+        return y - 24;
     }
 
     private float tableRow(PDPageContentStream content, PDType0Font font, String label, BigDecimal amount, float x, float y, float width) throws IOException {
@@ -226,21 +236,21 @@ public class RentalReceiptPdfService {
         content.stroke();
         showText(content, font, 10, x + 8, y - 20, label);
         showText(content, font, 10, x + width - 88, y - 20, formatAmount(amount) + " Ft");
-        return y - 26;
+        return y - 24;
     }
 
     private float totalRow(PDPageContentStream content, PDType0Font font, String label, BigDecimal amount, float x, float y, float width) throws IOException {
         drawBox(content, x, y - 22, width, 24, 0.95f);
         showText(content, font, 11, x + 8, y - 15, label);
         showText(content, font, 11, x + width - 98, y - 15, formatAmount(amount) + " Ft");
-        return y - 34;
+        return y - 30;
     }
 
     private void drawLandlordSignature(PDDocument document, PDPageContentStream content, float centerX, float centerY) throws IOException {
         BufferedImage signature = loadSignatureImage();
         PDImageXObject image = LosslessFactory.createFromImage(document, signature);
 
-        float imageWidth = 150f;
+        float imageWidth = 130f;
         float imageHeight = imageWidth * signature.getHeight() / signature.getWidth();
         float offsetX = randomOffsetPoints(10);
         float offsetY = randomOffsetPoints(5);
