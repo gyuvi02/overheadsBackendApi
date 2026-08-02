@@ -19,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Locale;
@@ -27,12 +28,12 @@ import java.util.Locale;
 public class RentalReceiptPdfService {
 
     private static final String[] ONES = {
-            "", "egy", "kettő", "három", "négy", "öt", "hat", "hét", "nyolc", "kilenc",
-            "tíz", "tizenegy", "tizenkettő", "tizenhárom", "tizennégy", "tizenöt",
-            "tizenhat", "tizenhét", "tizennyolc", "tizenkilenc"
+            "", "egy", "kett\u0151", "h\u00e1rom", "n\u00e9gy", "\u00f6t", "hat", "h\u00e9t", "nyolc", "kilenc",
+            "t\u00edz", "tizenegy", "tizenkett\u0151", "tizenh\u00e1rom", "tizenn\u00e9gy", "tizen\u00f6t",
+            "tizenhat", "tizenh\u00e9t", "tizennyolc", "tizenkilenc"
     };
     private static final String[] TENS = {
-            "", "", "húsz", "harminc", "negyven", "ötven", "hatvan", "hetven", "nyolcvan", "kilencven"
+            "", "", "h\u00fasz", "harminc", "negyven", "\u00f6tven", "hatvan", "hetven", "nyolcvan", "kilencven"
     };
 
     @Value("${file.create.folder:}")
@@ -64,54 +65,7 @@ public class RentalReceiptPdfService {
             document.addPage(page);
 
             try (PDPageContentStream content = new PDPageContentStream(document, page)) {
-                float margin = 50;
-                float y = page.getMediaBox().getHeight() - 55;
-
-                y = centeredText(content, boldFont, 16, "SZÁMVITELI BIZONYLAT", y, page);
-                y = centeredText(content, regularFont, 10, "Accounting receipt - not an invoice", y - 16, page);
-
-                y -= 30;
-                y = labelValue(content, boldFont, regularFont, "Bizonylat sorszáma / Receipt no.", receipt.getReceiptNumber(), margin, y);
-                y = labelValue(content, boldFont, regularFont, "Kiállítás dátuma / Issue date", formatDate(receipt.getIssueDate()), margin, y);
-                y = labelValue(content, boldFont, regularFont, "Időszak / Period", receipt.getPeriodYear() + ". " + receipt.getPeriodMonth() + ". hónap", margin, y);
-
-                y -= 14;
-                y = section(content, boldFont, "Bérbeadó / Landlord", margin, y);
-                y = labelValue(content, boldFont, regularFont, "Név / Name", landlordName, margin, y);
-                y = labelValue(content, boldFont, regularFont, "Lakcím / Address", landlordAddress, margin, y);
-                y = labelValue(content, boldFont, regularFont, "Adóazonosító / Tax ID", landlordTaxIdentifier, margin, y);
-
-                y -= 10;
-                y = section(content, boldFont, "Bérlő / Tenant", margin, y);
-                y = labelValue(content, boldFont, regularFont, "Név / Name", receipt.getTenantName(), margin, y);
-                y = labelValue(content, boldFont, regularFont, "Lakcím / Address", receipt.getTenantAddress(), margin, y);
-
-                y -= 10;
-                y = section(content, boldFont, "Bérlemény / Property", margin, y);
-                y = labelValue(content, boldFont, regularFont, "Cím / Address", receipt.getPropertyAddress(), margin, y);
-
-                y -= 10;
-                y = section(content, boldFont, "Összeg és jogcím / Amount and purpose", margin, y);
-                y = moneyLine(content, boldFont, regularFont, "Bérleti díj / Rent", receipt.getRentAmount(), margin, y);
-                y = moneyLine(content, boldFont, regularFont, "Rezsi / Utility costs", receipt.getUtilityAmount(), margin, y);
-                y = moneyLine(content, boldFont, regularFont, "Közös költség / Maintenance fee", receipt.getMaintenanceFee(), margin, y);
-                y = moneyLine(content, boldFont, regularFont, "Takarítás / Cleaning", receipt.getCleaningAmount(), margin, y);
-                if (receipt.getOtherAmount().compareTo(BigDecimal.ZERO) != 0) {
-                    y = moneyLine(content, boldFont, regularFont, nullToDash(receipt.getOtherText()) + " / Other", receipt.getOtherAmount(), margin, y);
-                }
-
-                y -= 8;
-                y = moneyLine(content, boldFont, boldFont, "ÖSSZESEN / TOTAL", receipt.getTotalAmount(), margin, y);
-                y = labelValue(content, boldFont, regularFont, "Összesen betűvel / In words", amountInHungarianWords(receipt.getTotalAmount()) + " forint", margin, y);
-                y = labelValue(content, boldFont, regularFont, "Fizetés módja / Payment method", paymentMethodText(receipt.getPaymentMethod()), margin, y);
-                y = labelValue(content, boldFont, regularFont, "Fizetés dátuma / Payment date", formatDate(receipt.getPaymentDate()), margin, y);
-
-                y -= 24;
-                showText(content, regularFont, 10, margin, y, "Ez a dokumentum számviteli bizonylat, nem számla.");
-
-                y -= 60;
-                signatureLine(content, regularFont, margin, y, "Bérbeadó / Landlord");
-                signatureLine(content, regularFont, 330, y, "Bérlő / Tenant");
+                drawReceipt(content, page, regularFont, boldFont, receipt);
             }
 
             ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -126,6 +80,63 @@ public class RentalReceiptPdfService {
         } catch (IOException e) {
             throw new RuntimeException("Error creating rental receipt PDF: " + e.getMessage(), e);
         }
+    }
+
+    private void drawReceipt(PDPageContentStream content, PDPage page, PDType0Font regularFont,
+                             PDType0Font boldFont, RentalReceipt receipt) throws IOException {
+        float margin = 50;
+        float width = page.getMediaBox().getWidth() - 2 * margin;
+        float y = page.getMediaBox().getHeight() - 42;
+
+        drawBox(content, margin, y - 58, width, 64, 0.94f);
+        centeredText(content, boldFont, 18, "SZ\u00c1MVITELI BIZONYLAT", y, page);
+        centeredText(content, regularFont, 10, "Accounting receipt - not an invoice", y - 19, page);
+        y -= 82;
+
+        y = beginSection(content, boldFont, "Bizonylat adatai / Receipt details", margin, y, width);
+        y = twoColumnLabelValue(content, boldFont, regularFont,
+                "Sorsz\u00e1m / Receipt no.", receipt.getReceiptNumber(),
+                "Id\u0151szak / Period", receipt.getPeriodYear() + ". " + receipt.getPeriodMonth() + ". h\u00f3nap",
+                margin, y);
+        y = twoColumnLabelValue(content, boldFont, regularFont,
+                "Ki\u00e1ll\u00edt\u00e1s / Issue date", formatDate(receipt.getIssueDate()),
+                "Fizet\u00e9s / Payment date", formatDate(receipt.getPaymentDate()),
+                margin, y);
+        y = endSection(y);
+
+        y = beginSection(content, boldFont, "Felek / Parties", margin, y, width);
+        y = subsection(content, boldFont, "B\u00e9rbead\u00f3 / Landlord", margin, y);
+        y = labelValue(content, boldFont, regularFont, "N\u00e9v / Name", landlordName, margin, y);
+        y = labelValue(content, boldFont, regularFont, "Lakc\u00edm / Address", landlordAddress, margin, y);
+        y = labelValue(content, boldFont, regularFont, "Ad\u00f3azonos\u00edt\u00f3 / Tax ID", landlordTaxIdentifier, margin, y);
+        y -= 5;
+        y = subsection(content, boldFont, "B\u00e9rl\u0151 / Tenant", margin, y);
+        y = labelValue(content, boldFont, regularFont, "N\u00e9v / Name", receipt.getTenantName(), margin, y);
+        y = labelValue(content, boldFont, regularFont, "Lakc\u00edm / Address", receipt.getTenantAddress(), margin, y);
+        y = endSection(y);
+
+        y = beginSection(content, boldFont, "B\u00e9rlem\u00e9ny / Property", margin, y, width);
+        y = labelValue(content, boldFont, regularFont, "C\u00edm / Address", receipt.getPropertyAddress(), margin, y);
+        y = endSection(y);
+
+        y = beginSection(content, boldFont, "T\u00e9telek / Items", margin, y, width);
+        y = tableHeader(content, boldFont, margin, y, width);
+        y = tableRow(content, regularFont, "B\u00e9rleti d\u00edj / Rent", receipt.getRentAmount(), margin, y, width);
+        y = tableRow(content, regularFont, "Rezsi / Utility costs", receipt.getUtilityAmount(), margin, y, width);
+        y = tableRow(content, regularFont, "K\u00f6z\u00f6s k\u00f6lts\u00e9g / Maintenance fee", receipt.getMaintenanceFee(), margin, y, width);
+        y = tableRow(content, regularFont, "Takar\u00edt\u00e1s / Cleaning", receipt.getCleaningAmount(), margin, y, width);
+        if (receipt.getOtherAmount().compareTo(BigDecimal.ZERO) != 0) {
+            y = tableRow(content, regularFont, nullToDash(receipt.getOtherText()) + " / Other", receipt.getOtherAmount(), margin, y, width);
+        }
+        y = totalRow(content, boldFont, "\u00d6SSZESEN / TOTAL", receipt.getTotalAmount(), margin, y, width);
+        y = endSection(y);
+
+        y = beginSection(content, boldFont, "Fizet\u00e9s / Payment", margin, y, width);
+        y = labelValue(content, boldFont, regularFont, "\u00d6sszesen bet\u0171vel / In words", amountInHungarianWords(receipt.getTotalAmount()) + " forint", margin, y);
+        y = labelValue(content, boldFont, regularFont, "Fizet\u00e9s m\u00f3dja / Payment method", paymentMethodText(receipt.getPaymentMethod()), margin, y);
+        y = endSection(y);
+
+        showText(content, regularFont, 10, margin, y - 2, "Ez a dokumentum sz\u00e1mviteli bizonylat, nem sz\u00e1mla.");
     }
 
     private Path savePdf(RentalReceipt receipt, byte[] pdfBytes) throws IOException {
@@ -149,26 +160,78 @@ public class RentalReceiptPdfService {
         return y;
     }
 
-    private float section(PDPageContentStream content, PDType0Font boldFont, String title, float x, float y) throws IOException {
+    private float beginSection(PDPageContentStream content, PDType0Font boldFont, String title, float x, float y, float width) throws IOException {
+        content.setLineWidth(0.8f);
+        content.moveTo(x, y);
+        content.lineTo(x + width, y);
+        content.stroke();
+        y -= 17;
         showText(content, boldFont, 12, x, y, title);
+        y -= 10;
+        content.setLineWidth(0.25f);
+        content.moveTo(x, y);
+        content.lineTo(x + width, y);
+        content.stroke();
+        return y - 14;
+    }
+
+    private float endSection(float y) {
+        return y - 13;
+    }
+
+    private float subsection(PDPageContentStream content, PDType0Font boldFont, String title, float x, float y) throws IOException {
+        showText(content, boldFont, 10, x, y, title);
         return y - 18;
     }
 
     private float labelValue(PDPageContentStream content, PDType0Font labelFont, PDType0Font valueFont, String label, String value, float x, float y) throws IOException {
-        showText(content, labelFont, 10, x, y, label + ":");
+        showText(content, labelFont, 9, x, y, label + ":");
         showText(content, valueFont, 10, x + 175, y, nullToDash(value));
         return y - 16;
     }
 
-    private float moneyLine(PDPageContentStream content, PDType0Font labelFont, PDType0Font valueFont, String label, BigDecimal amount, float x, float y) throws IOException {
-        return labelValue(content, labelFont, valueFont, label, formatAmount(amount) + " Ft", x, y);
+    private float twoColumnLabelValue(PDPageContentStream content, PDType0Font labelFont, PDType0Font valueFont,
+                                      String leftLabel, String leftValue, String rightLabel, String rightValue,
+                                      float x, float y) throws IOException {
+        showText(content, labelFont, 9, x, y, leftLabel + ":");
+        showText(content, valueFont, 10, x, y - 13, nullToDash(leftValue));
+        showText(content, labelFont, 9, x + 285, y, rightLabel + ":");
+        showText(content, valueFont, 10, x + 285, y - 13, nullToDash(rightValue));
+        return y - 32;
     }
 
-    private void signatureLine(PDPageContentStream content, PDType0Font font, float x, float y, String label) throws IOException {
-        content.moveTo(x, y);
-        content.lineTo(x + 180, y);
+    private float tableHeader(PDPageContentStream content, PDType0Font font, float x, float y, float width) throws IOException {
+        drawBox(content, x, y - 14, width, 20, 0.90f);
+        showText(content, font, 10, x + 8, y - 8, "Megnevez\u00e9s / Item");
+        showText(content, font, 10, x + width - 98, y - 8, "\u00d6sszeg / Amount");
+        return y - 26;
+    }
+
+    private float tableRow(PDPageContentStream content, PDType0Font font, String label, BigDecimal amount, float x, float y, float width) throws IOException {
+        content.setLineWidth(0.2f);
+        content.moveTo(x, y - 6);
+        content.lineTo(x + width, y - 6);
         content.stroke();
-        showText(content, font, 9, x + 42, y - 14, label);
+        showText(content, font, 10, x + 8, y - 20, label);
+        showText(content, font, 10, x + width - 88, y - 20, formatAmount(amount) + " Ft");
+        return y - 26;
+    }
+
+    private float totalRow(PDPageContentStream content, PDType0Font font, String label, BigDecimal amount, float x, float y, float width) throws IOException {
+        drawBox(content, x, y - 22, width, 24, 0.95f);
+        showText(content, font, 11, x + 8, y - 15, label);
+        showText(content, font, 11, x + width - 98, y - 15, formatAmount(amount) + " Ft");
+        return y - 34;
+    }
+
+    private void drawBox(PDPageContentStream content, float x, float y, float width, float height, float gray) throws IOException {
+        content.setNonStrokingColor(gray, gray, gray);
+        content.addRect(x, y, width, height);
+        content.fill();
+        content.setNonStrokingColor(0f, 0f, 0f);
+        content.setLineWidth(0.35f);
+        content.addRect(x, y, width, height);
+        content.stroke();
     }
 
     private void showText(PDPageContentStream content, PDType0Font font, int size, float x, float y, String text) throws IOException {
@@ -179,12 +242,12 @@ public class RentalReceiptPdfService {
         content.endText();
     }
 
-    private String formatDate(java.time.LocalDate date) {
+    private String formatDate(LocalDate date) {
         return date.format(DateTimeFormatter.ofPattern("yyyy. MM. dd.", new Locale("hu", "HU")));
     }
 
     private String paymentMethodText(PaymentMethod paymentMethod) {
-        return paymentMethod == PaymentMethod.CASH ? "Készpénz / Cash" : "Banki átutalás / Bank transfer";
+        return paymentMethod == PaymentMethod.CASH ? "K\u00e9szp\u00e9nz / Cash" : "Banki \u00e1tutal\u00e1s / Bank transfer";
     }
 
     private String formatAmount(BigDecimal amount) {
@@ -205,7 +268,7 @@ public class RentalReceiptPdfService {
         long remainder = value % 1_000;
 
         StringBuilder words = new StringBuilder();
-        appendGroup(words, millions, "millió");
+        appendGroup(words, millions, "milli\u00f3");
         appendGroup(words, thousands, "ezer");
         if (remainder > 0) {
             words.append(threeDigitGroup((int) remainder));
@@ -220,10 +283,7 @@ public class RentalReceiptPdfService {
         if (groupValue == 0) {
             return;
         }
-        words.append(threeDigitGroup((int) groupValue)).append(suffix);
-        if (words.length() > 0) {
-            words.append("-");
-        }
+        words.append(threeDigitGroup((int) groupValue)).append(suffix).append("-");
     }
 
     private String threeDigitGroup(int value) {
@@ -235,7 +295,7 @@ public class RentalReceiptPdfService {
             if (hundreds > 1) {
                 words.append(ONES[hundreds]);
             }
-            words.append("száz");
+            words.append("sz\u00e1z");
         }
         if (rest > 0) {
             words.append(twoDigitGroup(rest));
@@ -250,7 +310,7 @@ public class RentalReceiptPdfService {
         int tens = value / 10;
         int ones = value % 10;
         if (value == 20) {
-            return "húsz";
+            return "h\u00fasz";
         }
         if (tens == 2) {
             return "huszon" + ONES[ones];
