@@ -9,6 +9,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.text.PDFTextStripper;
 import org.checkerframework.checker.units.qual.C;
 import org.gyula.onlineinvoiceapi.config.TokenGenerator;
 import org.gyula.onlineinvoiceapi.model.*;
@@ -155,7 +156,9 @@ public class AdminService {
         log.info("In sendEmailPdf: {}", userEmail);
 
         boolean isHungarian = "h".equals(language);
-        boolean isRentalReceipt = "RENTAL_RECEIPT".equalsIgnoreCase(documentType);
+        byte[] pdfBytes = Base64.getDecoder().decode(pdfFile);
+        boolean isRentalReceipt = "RENTAL_RECEIPT".equalsIgnoreCase(documentType)
+                || (isBlank(documentType) && pdfLooksLikeRentalReceipt(pdfBytes));
         String subjectText = emailSubjectPrefix(isHungarian, isRentalReceipt);
         String emailText = emailBody(isHungarian, isRentalReceipt);
         
@@ -170,8 +173,6 @@ public class AdminService {
             helper.setText(emailText);
             helper.setFrom(mailSendAddress);
 
-            byte[] pdfBytes = Base64.getDecoder().decode(pdfFile);
-            ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
             String fileName = attachmentFileName(apartmentAddress, isRentalReceipt);
             helper.addAttachment(fileName, new ByteArrayResource(pdfBytes));
 
@@ -187,6 +188,16 @@ public class AdminService {
             throw e;
         }
         return ("Email sent to " + userEmail);
+    }
+
+    private boolean pdfLooksLikeRentalReceipt(byte[] pdfBytes) {
+        try (PDDocument document = PDDocument.load(new ByteArrayInputStream(pdfBytes))) {
+            String text = new PDFTextStripper().getText(document);
+            return text != null && (text.contains("SZÁMVITELI BIZONYLAT") || text.contains("Accounting receipt"));
+        } catch (Exception e) {
+            log.warn("Could not inspect PDF type before email sending: {}", e.getMessage());
+            return false;
+        }
     }
 
     private String emailSubjectPrefix(boolean isHungarian, boolean isRentalReceipt) {
@@ -210,6 +221,10 @@ public class AdminService {
     private String attachmentFileName(String apartmentAddress, boolean isRentalReceipt) {
         String suffix = isRentalReceipt ? "_szamviteli_bizonylat.pdf" : "_summary.pdf";
         return apartmentAddress + suffix;
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.trim().isEmpty();
     }
 
 
