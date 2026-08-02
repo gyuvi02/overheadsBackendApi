@@ -5,11 +5,16 @@ import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.pdfbox.pdmodel.graphics.image.LosslessFactory;
+import org.apache.pdfbox.pdmodel.graphics.image.PDImageXObject;
 import org.gyula.onlineinvoiceapi.model.PaymentMethod;
 import org.gyula.onlineinvoiceapi.model.RentalReceipt;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -19,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
@@ -26,6 +32,9 @@ import java.util.Locale;
 
 @Service
 public class RentalReceiptPdfService {
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+    private static final float POINTS_PER_MM = 72f / 25.4f;
 
     private static final String[] ONES = {
             "", "egy", "kett\u0151", "h\u00e1rom", "n\u00e9gy", "\u00f6t", "hat", "h\u00e9t", "nyolc", "kilenc",
@@ -65,7 +74,7 @@ public class RentalReceiptPdfService {
             document.addPage(page);
 
             try (PDPageContentStream content = new PDPageContentStream(document, page)) {
-                drawReceipt(content, page, regularFont, boldFont, receipt);
+                drawReceipt(document, content, page, regularFont, boldFont, receipt);
             }
 
             ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -82,7 +91,7 @@ public class RentalReceiptPdfService {
         }
     }
 
-    private void drawReceipt(PDPageContentStream content, PDPage page, PDType0Font regularFont,
+    private void drawReceipt(PDDocument document, PDPageContentStream content, PDPage page, PDType0Font regularFont,
                              PDType0Font boldFont, RentalReceipt receipt) throws IOException {
         float margin = 50;
         float width = page.getMediaBox().getWidth() - 2 * margin;
@@ -122,21 +131,19 @@ public class RentalReceiptPdfService {
         y = beginSection(content, boldFont, "T\u00e9telek / Items", margin, y, width);
         y = tableHeader(content, boldFont, margin, y, width);
         y = tableRow(content, regularFont, "B\u00e9rleti d\u00edj / Rent", receipt.getRentAmount(), margin, y, width);
-        y = tableRow(content, regularFont, "Rezsi / Utility costs", receipt.getUtilityAmount(), margin, y, width);
-        y = tableRow(content, regularFont, "K\u00f6z\u00f6s k\u00f6lts\u00e9g / Maintenance fee", receipt.getMaintenanceFee(), margin, y, width);
-        y = tableRow(content, regularFont, "Takar\u00edt\u00e1s / Cleaning", receipt.getCleaningAmount(), margin, y, width);
-        if (receipt.getOtherAmount().compareTo(BigDecimal.ZERO) != 0) {
-            y = tableRow(content, regularFont, nullToDash(receipt.getOtherText()) + " / Other", receipt.getOtherAmount(), margin, y, width);
-        }
-        y = totalRow(content, boldFont, "\u00d6SSZESEN / TOTAL", receipt.getTotalAmount(), margin, y, width);
+        y = totalRow(content, boldFont, "\u00d6SSZESEN / TOTAL", receipt.getRentAmount(), margin, y, width);
         y = endSection(y);
 
         y = beginSection(content, boldFont, "Fizet\u00e9s / Payment", margin, y, width);
-        y = labelValue(content, boldFont, regularFont, "\u00d6sszesen bet\u0171vel / In words", amountInHungarianWords(receipt.getTotalAmount()) + " forint", margin, y);
+        y = labelValue(content, boldFont, regularFont, "\u00d6sszesen bet\u0171vel / In words", amountInHungarianWords(receipt.getRentAmount()) + " forint", margin, y);
         y = labelValue(content, boldFont, regularFont, "Fizet\u00e9s m\u00f3dja / Payment method", paymentMethodText(receipt.getPaymentMethod()), margin, y);
         y = endSection(y);
 
-        showText(content, regularFont, 10, margin, y - 2, "Ez a dokumentum sz\u00e1mviteli bizonylat, nem sz\u00e1mla.");
+        y = beginSection(content, boldFont, "B\u00e9rbead\u00f3i al\u00e1\u00edr\u00e1s / Landlord signature", margin, y, width);
+        drawLandlordSignature(document, content, margin + width / 2, y - 28);
+        y -= 86;
+
+        showText(content, regularFont, 10, margin, y, "Ez a dokumentum sz\u00e1mviteli bizonylat, nem sz\u00e1mla.");
     }
 
     private Path savePdf(RentalReceipt receipt, byte[] pdfBytes) throws IOException {
@@ -222,6 +229,32 @@ public class RentalReceiptPdfService {
         showText(content, font, 11, x + 8, y - 15, label);
         showText(content, font, 11, x + width - 98, y - 15, formatAmount(amount) + " Ft");
         return y - 34;
+    }
+
+    private void drawLandlordSignature(PDDocument document, PDPageContentStream content, float centerX, float centerY) throws IOException {
+        BufferedImage signature = loadSignatureImage();
+        PDImageXObject image = LosslessFactory.createFromImage(document, signature);
+
+        float imageWidth = 150f;
+        float imageHeight = imageWidth * signature.getHeight() / signature.getWidth();
+        float offsetX = randomOffsetPoints(3);
+        float offsetY = randomOffsetPoints(1);
+        float x = centerX - imageWidth / 2 + offsetX;
+        float y = centerY - imageHeight / 2 + offsetY;
+
+        content.drawImage(image, x, y, imageWidth, imageHeight);
+    }
+
+    private BufferedImage loadSignatureImage() throws IOException {
+        BufferedImage source = ImageIO.read(new ClassPathResource("alairas vektor.png").getInputStream());
+        int cropWidth = Math.min(1260, source.getWidth());
+        int cropHeight = Math.min(520, source.getHeight());
+        int cropY = Math.min(80, Math.max(0, source.getHeight() - cropHeight));
+        return source.getSubimage(0, cropY, cropWidth, cropHeight);
+    }
+
+    private float randomOffsetPoints(int maxMillimeters) {
+        return (RANDOM.nextFloat() * 2f - 1f) * maxMillimeters * POINTS_PER_MM;
     }
 
     private void drawBox(PDPageContentStream content, float x, float y, float width, float height, float gray) throws IOException {
