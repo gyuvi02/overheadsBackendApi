@@ -765,7 +765,12 @@ public class AdminController {
 
             String response;
             try {
-                response = adminService.sendEmailPdf(requestPdf.getEmail(), requestPdf.getApartmentAddress(), requestPdf.getLanguage(), requestPdf.getPdfBase64());
+                response = adminService.sendEmailPdf(
+                        requestPdf.getEmail(),
+                        requestPdf.getApartmentAddress(),
+                        requestPdf.getLanguage(),
+                        requestPdf.getPdfBase64(),
+                        requestPdf.getDocumentType());
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }

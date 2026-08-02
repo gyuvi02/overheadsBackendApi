@@ -147,12 +147,17 @@ public class AdminService {
      * @throws Exception if an error occurs during email creation or sending
      */
     public String sendEmailPdf(String userEmail, String apartmentAddress, String language, String pdfFile) throws Exception{
+        return sendEmailPdf(userEmail, apartmentAddress, language, pdfFile, "SUMMARY");
+    }
+
+    public String sendEmailPdf(String userEmail, String apartmentAddress, String language, String pdfFile, String documentType) throws Exception{
 
         log.info("In sendEmailPdf: {}", userEmail);
 
         boolean isHungarian = "h".equals(language);
-        String subjectText = isHungarian ? "Összefoglaló a költségekről: " : "Cost summary: ";
-        String emailText = isHungarian ? "Csatolva küldöm a pdf fájlt, ami tartalmazza a havi költségeket összefoglalva.\n\nÜdvözlettel:\nGerő Ildikó" : "Please check the attached pdf file with the summary of the monthly costs.\n\nBest regards,\nIldikó Gerő";
+        boolean isRentalReceipt = "RENTAL_RECEIPT".equalsIgnoreCase(documentType);
+        String subjectText = emailSubjectPrefix(isHungarian, isRentalReceipt);
+        String emailText = emailBody(isHungarian, isRentalReceipt);
         
         String link;
 
@@ -167,7 +172,7 @@ public class AdminService {
 
             byte[] pdfBytes = Base64.getDecoder().decode(pdfFile);
             ByteArrayInputStream bis = new ByteArrayInputStream(pdfBytes);
-            String fileName = apartmentAddress + "summary.pdf";
+            String fileName = attachmentFileName(apartmentAddress, isRentalReceipt);
             helper.addAttachment(fileName, new ByteArrayResource(pdfBytes));
 
             if (mailSender != null) {
@@ -182,6 +187,29 @@ public class AdminService {
             throw e;
         }
         return ("Email sent to " + userEmail);
+    }
+
+    private String emailSubjectPrefix(boolean isHungarian, boolean isRentalReceipt) {
+        if (isRentalReceipt) {
+            return isHungarian ? "Számviteli bizonylat bérleti díjról: " : "Accounting receipt for rent: ";
+        }
+        return isHungarian ? "Összefoglaló a költségekről: " : "Cost summary: ";
+    }
+
+    private String emailBody(boolean isHungarian, boolean isRentalReceipt) {
+        if (isRentalReceipt) {
+            return isHungarian
+                    ? "Csatolva küldöm a bérleti díjról kiállított számviteli bizonylatot.\n\nÜdvözlettel:\nGerő Ildikó"
+                    : "Please find attached the accounting receipt issued for the rent.\n\nBest regards,\nIldikó Gerő";
+        }
+        return isHungarian
+                ? "Csatolva küldöm a pdf fájlt, ami tartalmazza a havi költségeket összefoglalva.\n\nÜdvözlettel:\nGerő Ildikó"
+                : "Please check the attached pdf file with the summary of the monthly costs.\n\nBest regards,\nIldikó Gerő";
+    }
+
+    private String attachmentFileName(String apartmentAddress, boolean isRentalReceipt) {
+        String suffix = isRentalReceipt ? "_szamviteli_bizonylat.pdf" : "_summary.pdf";
+        return apartmentAddress + suffix;
     }
 
 

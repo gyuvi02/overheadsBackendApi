@@ -5,6 +5,7 @@ public class emailPdfDTO {
     private String pdfBase64;
     private String language;
     private String apartmentAddress;
+    private String documentType;
 
     public String getEmail() {
         return email;
@@ -36,5 +37,13 @@ public class emailPdfDTO {
 
     public void setApartmentAddress(String apartmentAddress) {
         this.apartmentAddress = apartmentAddress;
+    }
+
+    public String getDocumentType() {
+        return documentType;
+    }
+
+    public void setDocumentType(String documentType) {
+        this.documentType = documentType;
     }
 }
