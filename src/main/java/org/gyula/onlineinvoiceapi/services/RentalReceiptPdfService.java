@@ -29,6 +29,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.Locale;
+import org.apache.pdfbox.util.Matrix;
 
 @Service
 public class RentalReceiptPdfService {
@@ -97,9 +98,9 @@ public class RentalReceiptPdfService {
         float width = page.getMediaBox().getWidth() - 2 * margin;
         float y = page.getMediaBox().getHeight() - 42;
 
-        drawBox(content, margin, y - 58, width, 64, 0.94f);
-        centeredText(content, boldFont, 18, "SZ\u00c1MVITELI BIZONYLAT", y, page);
-        centeredText(content, regularFont, 10, "Accounting receipt - not an invoice", y - 19, page);
+        drawBox(content, margin, y - 70, width, 64, 0.94f);
+        centeredText(content, boldFont, 18, "SZ\u00c1MVITELI BIZONYLAT", y - 20, page);
+        centeredText(content, regularFont, 10, "Accounting receipt - not an invoice", y - 40, page);
         y -= 82;
 
         y = beginSection(content, boldFont, "Bizonylat adatai / Receipt details", margin, y, width);
@@ -144,6 +145,10 @@ public class RentalReceiptPdfService {
         y -= 86;
 
         showText(content, regularFont, 10, margin, y, "Ez a dokumentum sz\u00e1mviteli bizonylat, nem sz\u00e1mla.");
+        content.setLineWidth(0.25f);
+        content.moveTo(margin, y - 8);
+        content.lineTo(margin + width, y - 8);
+        content.stroke();
     }
 
     private Path savePdf(RentalReceipt receipt, byte[] pdfBytes) throws IOException {
@@ -237,12 +242,19 @@ public class RentalReceiptPdfService {
 
         float imageWidth = 150f;
         float imageHeight = imageWidth * signature.getHeight() / signature.getWidth();
-        float offsetX = randomOffsetPoints(3);
-        float offsetY = randomOffsetPoints(1);
-        float x = centerX - imageWidth / 2 + offsetX;
-        float y = centerY - imageHeight / 2 + offsetY;
+        float offsetX = randomOffsetPoints(10);
+        float offsetY = randomOffsetPoints(5);
+        float rotation = (RANDOM.nextFloat() * 10f - 5f);
+        float drawCenterX = centerX + offsetX;
+        float drawCenterY = centerY + offsetY;
+        float x = -imageWidth / 2;
+        float y = -imageHeight / 2;
 
+        content.saveGraphicsState();
+        content.transform(Matrix.getTranslateInstance(drawCenterX, drawCenterY));
+        content.transform(Matrix.getRotateInstance(Math.toRadians(rotation), 0, 0));
         content.drawImage(image, x, y, imageWidth, imageHeight);
+        content.restoreGraphicsState();
     }
 
     private BufferedImage loadSignatureImage() throws IOException {
