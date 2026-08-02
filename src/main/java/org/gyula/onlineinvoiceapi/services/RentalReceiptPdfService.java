@@ -246,11 +246,7 @@ public class RentalReceiptPdfService {
     }
 
     private BufferedImage loadSignatureImage() throws IOException {
-        BufferedImage source = ImageIO.read(new ClassPathResource("alairas vektor.png").getInputStream());
-        int cropWidth = Math.min(1260, source.getWidth());
-        int cropHeight = Math.min(520, source.getHeight());
-        int cropY = Math.min(80, Math.max(0, source.getHeight() - cropHeight));
-        return source.getSubimage(0, cropY, cropWidth, cropHeight);
+        return ImageIO.read(new ClassPathResource("alairas.png").getInputStream());
     }
 
     private float randomOffsetPoints(int maxMillimeters) {
